@@ -5,8 +5,12 @@ import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import com.example.walkhomesafe.model.EmergencyContact
+import android.telephony.SmsManager
+import android.content.Context
 
-class ContactPickerHelper(
+class ContactHelper(
+    private val context: Context,
     activity: ComponentActivity,
     private val onContactPicked: (name: String, number: String) -> Unit
 ) {
@@ -59,5 +63,22 @@ class ContactPickerHelper(
         }
 
         cursor?.close()
+    }
+
+    fun sendEmergencyMessage(
+        contacts: List<EmergencyContact>,
+        message: String
+    ) {
+        val smsManager = context.getSystemService(SmsManager::class.java)
+
+        contacts.forEach { contact ->
+            smsManager.sendTextMessage(
+                contact.phone,
+                null,
+                message,
+                null,
+                null
+            )
+        }
     }
 }

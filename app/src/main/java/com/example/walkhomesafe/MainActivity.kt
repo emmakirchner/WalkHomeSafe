@@ -12,41 +12,93 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.walkhomesafe.helper.ContactPickerHelper
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.example.walkhomesafe.data.*
+import com.example.walkhomesafe.helper.ContactHelper
 import com.example.walkhomesafe.model.EmergencyContact
 import com.example.walkhomesafe.navigation.*
 import com.example.walkhomesafe.screens.*
 import com.example.walkhomesafe.ui.theme.WalkHomeSafeTheme
+import kotlinx.coroutines.launch
 
 
 class MainActivity : ComponentActivity() {
     private var contacts by mutableStateOf<List<EmergencyContact>>(emptyList())
+    private var emergencyMessage by mutableStateOf("")
 
-    private lateinit var contactPicker: ContactPickerHelper
+    private lateinit var contactHelper: ContactHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         requestContactsPermission()
+        requestSmsPermission()
 
-        contactPicker = ContactPickerHelper(this) { name, number ->
-            contacts = contacts + EmergencyContact(
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    emergencyContactsFlow(this@MainActivity).collect { storedContacts ->
+                        contacts = storedContacts
+                    }
+                }
+
+                launch {
+                    emergencyMessageFlow(this@MainActivity).collect { storedMessage ->
+                        emergencyMessage = storedMessage
+                    }
+                }
+            }
+        }
+
+        contactHelper = ContactHelper(this,this) { name, number ->
+            val newContact = EmergencyContact(
                 id = System.currentTimeMillis(),
                 name = name,
                 phone = number
             )
+            contacts = contacts + newContact
+
+            lifecycleScope.launch {
+                saveEmergencyContacts(
+                    context = this@MainActivity,
+                    contacts = contacts
+                )
+            }
         }
 
         setContent {
             WalkHomeSafeTheme {
                 MainScreen(
+                    emergencyMessage = emergencyMessage,
                     contacts = contacts,
                     onAddContact = {
-                        contactPicker.launch()
+                        contactHelper.launch()
                     },
                     onDeleteContact = { contact ->
                         contacts = contacts.filterNot { it.id == contact.id }
+
+                        lifecycleScope.launch {
+                            saveEmergencyContacts(
+                                context = this@MainActivity,
+                                contacts = contacts
+                            )
+                        }
+                    },
+                    onEmergencyMessageChange = { newMessage ->
+                        emergencyMessage = newMessage
+
+                        lifecycleScope.launch {
+                            saveEmergencyMessage(
+                                context = this@MainActivity,
+                                message = newMessage
+                            )
+                        }
+                   },
+                    onSendMessage = {
+                        onSendMessageClicked()
                     }
                 )
             }
@@ -66,13 +118,45 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
+    private fun requestSmsPermission() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.SEND_SMS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.SEND_SMS),
+                200
+            )
+        }
+    }
+
+    private fun onSendMessageClicked() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.SEND_SMS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            contactHelper.sendEmergencyMessage(
+                contacts = contacts,
+                message = emergencyMessage
+            )
+        } else {
+            requestSmsPermission()
+        }
+    }
 }
 
 @Composable
 fun MainScreen(
+    emergencyMessage: String,
     contacts: List<EmergencyContact>,
     onAddContact: () -> Unit,
-    onDeleteContact: (EmergencyContact) -> Unit
+    onDeleteContact: (EmergencyContact) -> Unit,
+    onEmergencyMessageChange: (String) -> Unit,
+    onSendMessage: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(BottomTab.HOME) }
 
@@ -91,9 +175,12 @@ fun MainScreen(
             when (selectedTab) {
                 BottomTab.HOME -> HomeScreen()
                 BottomTab.CONTACTS -> ContactsScreen(
+                    emergencyMessage = emergencyMessage,
                     contacts = contacts,
                     onDeleteContact = onDeleteContact,
-                    onAddContact = onAddContact
+                    onAddContact = onAddContact,
+                    onEmergencyMessageChange = onEmergencyMessageChange,
+                    onSendMessage = onSendMessage
                 )
                 BottomTab.MAP -> MapScreen()
                 BottomTab.SETTINGS -> SettingsScreen()

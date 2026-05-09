@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,14 +28,13 @@ fun EmergencyContactList(
 ) {
     LazyColumn(
         modifier = Modifier
-            .heightIn(max = 300.dp)
-            .padding(16.dp),
+            .heightIn(max = 300.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
         item {
             Text(
-                text = "Notfallkontakte",
+                text = "Notfall-Kontakte",
                 style = MaterialTheme.typography.titleMedium
             )
         }
