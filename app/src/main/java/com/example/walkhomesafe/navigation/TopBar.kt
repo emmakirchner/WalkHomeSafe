@@ -19,7 +19,7 @@ fun TopBar() {
             title = {
                 Column {
                     Text(
-                        text = "SafeWalk",
+                        text = "WalkHomeSafe",
                         style = MaterialTheme.typography.titleLarge
                     )
                     Text(

@@ -14,7 +14,7 @@ val Context.dataStore by preferencesDataStore(
 )
 
 private const val DEFAULT_MESSAGE =
-    "NOTFALL: Ich brauche Hilfe! Ich bin hier: [STANDORT-LINK]. Bitte schaut sofort nach mir. Dies ist eine automatische Nachricht von SafeWalk."
+    "NOTFALL: Ich brauche Hilfe! Ich bin hier: [STANDORT-LINK]. Bitte schaut sofort nach mir. Dies ist eine automatische Nachricht von WalkHomeSafe."
 
 private val jsonFormat = Json {
     ignoreUnknownKeys = true
