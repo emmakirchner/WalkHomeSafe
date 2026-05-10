@@ -2,7 +2,7 @@ package com.example.walkhomesafe.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Icon
@@ -42,7 +42,7 @@ fun NavigationBar(
             onClick = { onTabSelected(BottomTab.CONTACTS) },
             icon = {
                 Icon(
-                    imageVector = Icons.Filled.Phone,
+                    imageVector = Icons.Filled.Contacts,
                     contentDescription = "Kontakte"
                 )
             },

@@ -1,7 +1,9 @@
 package com.example.walkhomesafe
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +22,7 @@ import com.example.walkhomesafe.helper.ContactHelper
 import com.example.walkhomesafe.model.EmergencyContact
 import com.example.walkhomesafe.navigation.*
 import com.example.walkhomesafe.screens.*
+import com.example.walkhomesafe.services.EmergencyAlarmService
 import com.example.walkhomesafe.ui.theme.WalkHomeSafeTheme
 import kotlinx.coroutines.launch
 
@@ -36,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
         requestContactsPermission()
         requestSmsPermission()
+        requestNotificationPermission()
 
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -99,6 +103,13 @@ class MainActivity : ComponentActivity() {
                    },
                     onSendMessage = {
                         onSendMessageClicked()
+                    },
+                    onSendMessageAndAlarm = {
+                        onSendMessageClicked()
+                        startEmergencyAlarm()
+                    },
+                    onCancelAlarm = {
+                        stopEmergencyAlarm()
                     }
                 )
             }
@@ -133,6 +144,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    300
+                )
+            }
+        }
+    }
+
     private fun onSendMessageClicked() {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -147,6 +174,23 @@ class MainActivity : ComponentActivity() {
             requestSmsPermission()
         }
     }
+
+    private fun startEmergencyAlarm() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            startForegroundService(Intent(this, EmergencyAlarmService::class.java))
+        } else {
+            requestNotificationPermission()
+        }
+    }
+
+    private fun stopEmergencyAlarm() {
+        stopService(Intent(this, EmergencyAlarmService::class.java))
+    }
+
 }
 
 @Composable
@@ -156,7 +200,9 @@ fun MainScreen(
     onAddContact: () -> Unit,
     onDeleteContact: (EmergencyContact) -> Unit,
     onEmergencyMessageChange: (String) -> Unit,
-    onSendMessage: () -> Unit
+    onSendMessage: () -> Unit,
+    onSendMessageAndAlarm: () -> Unit,
+    onCancelAlarm: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(BottomTab.HOME) }
 
@@ -173,7 +219,11 @@ fun MainScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when (selectedTab) {
-                BottomTab.HOME -> HomeScreen()
+                BottomTab.HOME -> HomeScreen(
+                    onSendMessage = onSendMessage,
+                    onSendMessageAndAlarm = onSendMessageAndAlarm,
+                    onCancelAlarm = onCancelAlarm
+                )
                 BottomTab.CONTACTS -> ContactsScreen(
                     emergencyMessage = emergencyMessage,
                     contacts = contacts,
