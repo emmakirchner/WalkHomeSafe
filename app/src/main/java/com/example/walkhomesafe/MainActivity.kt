@@ -179,8 +179,7 @@ fun MainScreen(
                     contacts = contacts,
                     onDeleteContact = onDeleteContact,
                     onAddContact = onAddContact,
-                    onEmergencyMessageChange = onEmergencyMessageChange,
-                    onSendMessage = onSendMessage
+                    onEmergencyMessageChange = onEmergencyMessageChange
                 )
                 BottomTab.MAP -> MapScreen()
                 BottomTab.SETTINGS -> SettingsScreen()

@@ -23,6 +23,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.walkhomesafe.components.EmergencyContactList
+import com.example.walkhomesafe.components.EmergencyMessageTextField
 import com.example.walkhomesafe.model.*
 
 
@@ -32,97 +33,17 @@ fun ContactsScreen(
     contacts: List<EmergencyContact>,
     onDeleteContact: (EmergencyContact) -> Unit,
     onAddContact: () -> Unit,
-    onEmergencyMessageChange: (String) -> Unit,
-    onSendMessage: () -> Unit
+    onEmergencyMessageChange: (String) -> Unit
 ) {
-    var localMessage by rememberSaveable { mutableStateOf(emergencyMessage) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        EmergencyContactList(contacts, onDeleteContact, onAddContact)
 
-        // emergency contacts
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outline
-            ),
-            colors = CardDefaults.outlinedCardColors(
-                containerColor = Color.Transparent
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-
-                EmergencyContactList(
-                    contacts = contacts,
-                    onDeleteContact = onDeleteContact,
-                    onAddContact = onAddContact
-                )
-
-                Button(
-                    onClick = onSendMessage,
-                    enabled = contacts.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("SOS‑Nachricht senden")
-                }
-            }
-        }
-
-        // emergency message text field
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            border = BorderStroke(
-                1.dp,
-                MaterialTheme.colorScheme.outline
-            ),
-            colors = CardDefaults.outlinedCardColors(
-                containerColor = Color.Transparent
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Notfall‑Nachricht",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TextField(
-                    value = localMessage,
-                    onValueChange = { localMessage = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            if (!focusState.isFocused) {
-                                onEmergencyMessageChange(localMessage)
-                            }
-                        },
-                    maxLines = 4,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor =
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        unfocusedContainerColor =
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent
-                    )
-                )
-                Text(
-                    text = "Diese Nachricht wird an alle Notfall-Kontakte gesendet.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        EmergencyMessageTextField(emergencyMessage, onEmergencyMessageChange)
     }
 }
 
