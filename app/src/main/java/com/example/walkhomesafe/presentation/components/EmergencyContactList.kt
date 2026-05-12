@@ -1,4 +1,4 @@
-package com.example.walkhomesafe.components
+package com.example.walkhomesafe.presentation.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement

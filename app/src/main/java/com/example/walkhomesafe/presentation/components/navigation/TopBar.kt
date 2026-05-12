@@ -1,12 +1,12 @@
-package com.example.walkhomesafe.navigation
+package com.example.walkhomesafe.presentation.components.navigation
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 
@@ -28,7 +28,7 @@ fun TopBar() {
                     )
                 }
             },
-            colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+            colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface
             )
         )

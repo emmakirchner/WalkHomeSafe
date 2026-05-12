@@ -1,6 +1,7 @@
 package com.example.walkhomesafe.data
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.walkhomesafe.model.EmergencyContact
@@ -12,9 +13,6 @@ private const val DATASTORE_NAME = "walkhomesafe_preferences"
 val Context.dataStore by preferencesDataStore(
     name = DATASTORE_NAME
 )
-
-private const val DEFAULT_MESSAGE =
-    "NOTFALL: Ich brauche Hilfe! Ich bin hier: [STANDORT-LINK]. Bitte schaut sofort nach mir. Dies ist eine automatische Nachricht von WalkHomeSafe."
 
 private val jsonFormat = Json {
     ignoreUnknownKeys = true
@@ -47,9 +45,9 @@ suspend fun saveEmergencyMessage(
     }
 }
 
-fun emergencyMessageFlow(context: Context): Flow<String> =
+fun emergencyMessageFlow(context: Context): Flow<String?> =
     context.dataStore.data.map { prefs ->
-        prefs[DataStoreKeys.EMERGENCY_MESSAGE] ?: DEFAULT_MESSAGE
+        prefs[DataStoreKeys.EMERGENCY_MESSAGE]
     }
 
 

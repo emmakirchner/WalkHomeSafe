@@ -1,4 +1,4 @@
-package com.example.walkhomesafe.navigation
+package com.example.walkhomesafe.presentation.components.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -40,8 +40,7 @@ fun NavigationBar(
         NavigationBarItem(
             selected = selectedTab == BottomTab.CONTACTS,
             onClick = { onTabSelected(BottomTab.CONTACTS) },
-            icon = {
-                Icon(
+            icon = {                Icon(
                     imageVector = Icons.Filled.Phone,
                     contentDescription = "Kontakte"
                 )
