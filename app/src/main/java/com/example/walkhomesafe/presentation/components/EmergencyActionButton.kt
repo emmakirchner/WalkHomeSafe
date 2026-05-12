@@ -158,14 +158,15 @@ private fun SosContent(isWhite: Boolean, isAlarmActive: Boolean) {
             color = textColor.copy(alpha = 0.8f),
             fontWeight = FontWeight.Medium
         )
-        SosHintRow(isWhite)
+        SosHintRow(isWhite, isAlarmActive)
     }
 }
 
 @Composable
-private fun SosHintRow(isWhite: Boolean) {
+private fun SosHintRow(isWhite: Boolean, isAlarmActive: Boolean) {
     val textColor = if (isWhite) RedDark else Color.White
     val label = when {
+        isAlarmActive -> ""
         isWhite -> "Loslassen = Alarm starten"
         else -> "Halten = Lauter Alarm"
     }
