@@ -51,8 +51,8 @@ class PermissionsViewModel(
     fun onPermissionResult(granted: Boolean) {
         if (granted) {
             pendingAction?.invoke()
-            pendingAction = null
         }
+        pendingAction = null
         requestNextStartupPermission()
     }
 
@@ -68,9 +68,10 @@ class PermissionsViewModel(
     }
 
     fun requestSendSmsAndNotifications(onGranted: () -> Unit) {
-        pendingAction = onGranted
-
         if (!hasPermission(Manifest.permission.SEND_SMS)) {
+            pendingAction = {
+                requestSendSmsAndNotifications(onGranted)
+            }
             viewModelScope.launch {
                 _permissionRequests.emit(PermissionIntent.SendSms)
             }
@@ -80,13 +81,14 @@ class PermissionsViewModel(
         if (Build.VERSION.SDK_INT >= 33 &&
             !hasPermission(Manifest.permission.POST_NOTIFICATIONS)
         ) {
+            pendingAction = onGranted
             viewModelScope.launch {
                 _permissionRequests.emit(PermissionIntent.Notifications)
             }
             return
         }
 
-        pendingAction?.invoke()
+        onGranted()
         pendingAction = null
     }
 

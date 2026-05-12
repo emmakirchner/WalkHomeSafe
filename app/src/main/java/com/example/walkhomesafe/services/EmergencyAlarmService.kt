@@ -5,7 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.net.Uri
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.example.walkhomesafe.R
@@ -25,13 +27,26 @@ class EmergencyAlarmService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!::player.isInitialized) {
-            player = MediaPlayer.create(this, R.raw.emergency_alarm).apply {
-                isLooping = true
-                setVolume(1f, 1f)
-                start()
+            player = MediaPlayer().apply {
+                try {
+                    setDataSource(
+                        applicationContext,
+                        Uri.parse("android.resource://$packageName/${R.raw.emergency_alarm}")
+                    )
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                    isLooping = true
+                    prepare()
+                    start()
+                } catch (e: Exception) {
+                    stopSelf()
+                }
             }
         }
-
         return START_STICKY
     }
 
@@ -61,6 +76,7 @@ class EmergencyAlarmService : Service() {
             .setContentTitle("Notfallalarm aktiv")
             .setContentText("Alarm läuft – Tippen zum Stoppen")
             .setOngoing(true)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .build()
     }
 
