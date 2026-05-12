@@ -1,5 +1,6 @@
 package com.example.walkhomesafe.helper
 
+import android.Manifest
 import android.net.Uri
 import android.provider.ContactsContract
 import androidx.activity.ComponentActivity
@@ -8,24 +9,21 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.example.walkhomesafe.model.EmergencyContact
 import android.telephony.SmsManager
 import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
-class ContactHelper(
-    private val context: Context,
-    activity: ComponentActivity,
-    private val onContactPicked: (name: String, number: String) -> Unit
-) {
+class ContactHelper(private val context: Context) {
 
-    private val launcher: ActivityResultLauncher<Void?> =
-        activity.registerForActivityResult(ActivityResultContracts.PickContact()) { uri ->
-            uri?.let { readContact(activity, it) }
+    fun readContact(uri: Uri, onResult: (String, String) -> Unit) {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CONTACTS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
         }
 
-    fun launch() {
-        launcher.launch(null)
-    }
-
-    private fun readContact(activity: ComponentActivity, uri: Uri) {
-        val cursor = activity.contentResolver.query(
+        val cursor = context.contentResolver.query(
             uri,
             arrayOf(
                 ContactsContract.Contacts._ID,
@@ -40,16 +38,16 @@ class ContactHelper(
             val id = cursor.getString(0)
             val name = cursor.getString(1)
             cursor.close()
-            readPhoneNumber(activity, id, name)
+            readPhoneNumber(id, name, onResult)
         }
     }
 
     private fun readPhoneNumber(
-        activity: ComponentActivity,
         contactId: String,
-        name: String
+        name: String,
+        onResult: (String, String) -> Unit
     ) {
-        val cursor = activity.contentResolver.query(
+        val cursor = context.contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
             "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
@@ -59,7 +57,7 @@ class ContactHelper(
 
         if (cursor?.moveToFirst() == true) {
             val number = cursor.getString(0)
-            onContactPicked(name, number)
+            onResult(name, number)
         }
 
         cursor?.close()

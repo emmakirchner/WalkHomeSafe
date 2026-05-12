@@ -1,4 +1,4 @@
-package com.example.walkhomesafe.navigation
+package com.example.walkhomesafe.presentation.components.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
