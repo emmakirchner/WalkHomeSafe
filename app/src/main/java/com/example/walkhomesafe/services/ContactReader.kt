@@ -1,19 +1,15 @@
-package com.example.walkhomesafe.helper
+package com.example.walkhomesafe.services
 
 import android.Manifest
-import android.net.Uri
-import android.provider.ContactsContract
-import androidx.activity.ComponentActivity
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import com.example.walkhomesafe.model.EmergencyContact
-import android.telephony.SmsManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
 
-class ContactHelper(private val context: Context) {
-
+class ContactHelper(
+    private val context: Context
+) {
     fun readContact(uri: Uri, onResult: (String, String) -> Unit) {
         if (ContextCompat.checkSelfPermission(
                 context,
@@ -61,22 +57,5 @@ class ContactHelper(private val context: Context) {
         }
 
         cursor?.close()
-    }
-
-    fun sendEmergencyMessage(
-        contacts: List<EmergencyContact>,
-        message: String
-    ) {
-        val smsManager = context.getSystemService(SmsManager::class.java)
-
-        contacts.forEach { contact ->
-            smsManager.sendTextMessage(
-                contact.phone,
-                null,
-                message,
-                null,
-                null
-            )
-        }
     }
 }

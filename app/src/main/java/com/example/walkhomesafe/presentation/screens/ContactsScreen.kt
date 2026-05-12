@@ -1,8 +1,5 @@
 package com.example.walkhomesafe.presentation.screens
 
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -17,13 +14,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.walkhomesafe.helper.ContactHelper
+import com.example.walkhomesafe.services.ContactHelper
 import com.example.walkhomesafe.presentation.components.EmergencyContactList
 import com.example.walkhomesafe.presentation.components.EmergencyMessageTextField
 import com.example.walkhomesafe.viewmodel.ContactsViewModel
-import com.example.walkhomesafe.viewmodel.HomeViewModel
 import com.example.walkhomesafe.viewmodel.MessageViewModel
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 
@@ -65,20 +60,11 @@ fun ContactsScreen(
         EmergencyContactList(
             contacts = contacts,
             onDeleteContact = contactsViewModel::deleteContact,
-
             onAddContact = {
-                if (
-                    ContextCompat.checkSelfPermission(
-                        context,
-                        Manifest.permission.READ_CONTACTS
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
+                permissionsViewModel.requestReadContacts {
                     contactsViewModel.onReadContactsGranted()
-                } else {
-                    permissionsViewModel.onReadContactsRequested()
                 }
             }
-
         )
 
         EmergencyMessageTextField(

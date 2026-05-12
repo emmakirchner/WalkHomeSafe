@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.walkhomesafe.data.emergencyContactsFlow
 import com.example.walkhomesafe.data.saveEmergencyContacts
 import com.example.walkhomesafe.model.EmergencyContact
-import com.example.walkhomesafe.presentation.permissions.PermissionIntent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,12 +38,13 @@ class ContactsViewModel(
     }
 
     fun addContact(name: String, phone: String) {
+        if (_contacts.value.any { it.phone == phone }) return
+
         val contact = EmergencyContact(
             id = System.currentTimeMillis(),
             name = name,
             phone = phone
         )
-
         val updated = _contacts.value + contact
         _contacts.value = updated
         save(updated)

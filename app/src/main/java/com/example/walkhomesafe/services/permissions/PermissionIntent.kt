@@ -1,4 +1,4 @@
-package com.example.walkhomesafe.presentation.permissions
+package com.example.walkhomesafe.services.permissions
 
 sealed interface PermissionIntent {
     data object SendSms : PermissionIntent

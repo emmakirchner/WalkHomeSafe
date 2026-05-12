@@ -1,16 +1,49 @@
 package com.example.walkhomesafe.viewmodel
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
+import android.app.Application
+import android.content.Intent
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.walkhomesafe.presentation.permissions.PermissionIntent
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.launch
+import androidx.lifecycle.AndroidViewModel
+import com.example.walkhomesafe.services.MessageSender
+import com.example.walkhomesafe.model.EmergencyContact
+import com.example.walkhomesafe.services.EmergencyAlarmService
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val context = getApplication<Application>()
+    private val messageSender = MessageSender(context)
+
+    fun onSendMessage(
+        contacts: List<EmergencyContact>,
+        message: String
+    ) {
+        messageSender.send(
+            contacts = contacts,
+            message = message
+        )
+    }
+
+    fun onSendMessageAndAlarm(
+        contacts: List<EmergencyContact>,
+        message: String
+    ) {
+        onSendMessage(contacts, message)
+        startAlarmService()
+    }
+
+    fun onCancelAlarm() {
+        stopAlarmService()
+    }
+
+    private fun startAlarmService() {
+        val intent = Intent(context, EmergencyAlarmService::class.java)
+        ContextCompat.startForegroundService(context, intent)
+    }
+
+    private fun stopAlarmService() {
+        val intent = Intent(context, EmergencyAlarmService::class.java)
+        context.stopService(intent)
+    }
 }

@@ -1,4 +1,4 @@
-package com.example.walkhomesafe.presentation.permissions
+package com.example.walkhomesafe.services.permissions
 
 import android.Manifest
 import android.os.Build
@@ -11,27 +11,27 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun PermissionHost(
     permissionFlow: Flow<PermissionIntent>,
-    onGranted: (PermissionIntent) -> Unit
+    onResult: (granted: Boolean) -> Unit
 ) {
     val smsPermissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-            if (granted) onGranted(PermissionIntent.SendSms)
+            onResult(granted)
         }
 
     val notificationPermissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-            if (granted) onGranted(PermissionIntent.Notifications)
+            onResult(granted)
         }
 
     val contactsPermissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-            if (granted) onGranted(PermissionIntent.ReadContacts)
+            onResult(granted)
         }
 
     LaunchedEffect(Unit) {
@@ -50,9 +50,9 @@ fun PermissionHost(
                     }
 
                 PermissionIntent.ReadContacts ->
-                   contactsPermissionLauncher.launch(
-                       Manifest.permission.READ_CONTACTS
-                   )
+                    contactsPermissionLauncher.launch(
+                        Manifest.permission.READ_CONTACTS
+                    )
             }
         }
     }

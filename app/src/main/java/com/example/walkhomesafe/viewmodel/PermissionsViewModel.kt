@@ -1,64 +1,109 @@
 package com.example.walkhomesafe.viewmodel
 
 import android.Manifest
-import android.content.Context
+import android.app.Application
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.walkhomesafe.presentation.permissions.PermissionIntent
+import com.example.walkhomesafe.services.permissions.PermissionIntent
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
-class PermissionsViewModel : ViewModel() {
+class PermissionsViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val context = getApplication<Application>()
+
     private val _permissionRequests =
         MutableSharedFlow<PermissionIntent>()
 
     val permissionRequests = _permissionRequests.asSharedFlow()
 
-    fun onSendSmsRequested() {
+    private var pendingAction: (() -> Unit)? = null
+    private val pendingStartupPermissions = mutableListOf<PermissionIntent>()
+
+    fun requestStartupPermissions() {
+        pendingStartupPermissions.clear()
+        if (!hasPermission(Manifest.permission.READ_CONTACTS))
+            pendingStartupPermissions.add(PermissionIntent.ReadContacts)
+        if (!hasPermission(Manifest.permission.SEND_SMS))
+            pendingStartupPermissions.add(PermissionIntent.SendSms)
+        if (Build.VERSION.SDK_INT >= 33 &&
+            !hasPermission(Manifest.permission.POST_NOTIFICATIONS)
+        ) {
+            pendingStartupPermissions.add(PermissionIntent.Notifications)
+        }
+        requestNextStartupPermission()
+    }
+
+    private fun requestNextStartupPermission() {
+        if (pendingStartupPermissions.isEmpty()) return
+        val intent = pendingStartupPermissions.removeAt(0)
         viewModelScope.launch {
-            _permissionRequests.emit(PermissionIntent.SendSms)
+            _permissionRequests.emit(intent)
         }
     }
 
-    fun onAlarmRequested() {
-        viewModelScope.launch {
-            _permissionRequests.emit(PermissionIntent.Notifications)
+    fun onPermissionResult(granted: Boolean) {
+        if (granted) {
+            pendingAction?.invoke()
+            pendingAction = null
         }
+        requestNextStartupPermission()
     }
 
-    fun onReadContactsRequested() {
-        viewModelScope.launch {
-            _permissionRequests.emit(PermissionIntent.ReadContacts)
-        }
-    }
-
-    fun requestStartupPermissions(context: Context) {
-        viewModelScope.launch {
-
-            if (!context.hasPermission(Manifest.permission.READ_CONTACTS)) {
-                _permissionRequests.emit(PermissionIntent.ReadContacts)
-            }
-
-            if (!context.hasPermission(Manifest.permission.SEND_SMS)) {
+    fun requestSendSms(onGranted: () -> Unit) {
+        if (hasPermission(Manifest.permission.SEND_SMS)) {
+            onGranted()
+        } else {
+            pendingAction = onGranted
+            viewModelScope.launch {
                 _permissionRequests.emit(PermissionIntent.SendSms)
             }
+        }
+    }
 
-            if (Build.VERSION.SDK_INT >= 33 &&
-                !context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)
-            ) {
+    fun requestSendSmsAndNotifications(onGranted: () -> Unit) {
+        pendingAction = onGranted
+
+        if (!hasPermission(Manifest.permission.SEND_SMS)) {
+            viewModelScope.launch {
+                _permissionRequests.emit(PermissionIntent.SendSms)
+            }
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= 33 &&
+            !hasPermission(Manifest.permission.POST_NOTIFICATIONS)
+        ) {
+            viewModelScope.launch {
                 _permissionRequests.emit(PermissionIntent.Notifications)
+            }
+            return
+        }
+
+        pendingAction?.invoke()
+        pendingAction = null
+    }
+
+    fun requestReadContacts(onGranted: () -> Unit) {
+        if (hasPermission(Manifest.permission.READ_CONTACTS)) {
+            onGranted()
+        } else {
+            pendingAction = onGranted
+            viewModelScope.launch {
+                _permissionRequests.emit(PermissionIntent.ReadContacts)
             }
         }
     }
 
-    fun Context.hasPermission(permission: String): Boolean =
+    private fun hasPermission(permission: String): Boolean =
         ContextCompat.checkSelfPermission(
-            this,
+            context,
             permission
         ) == PackageManager.PERMISSION_GRANTED
-
 }
