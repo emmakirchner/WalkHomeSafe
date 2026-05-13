@@ -1,8 +1,9 @@
 package com.example.walkhomesafe.presentation.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,53 +63,59 @@ fun EmergencyActionButton(
             .height(260.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(brush = backgroundBrush(isWhite))
-            .pointerInput(isAlarmActive) {
+            .pointerInput(Unit) {
                 val cancelPx = 72.dp.toPx()
-                detectTapGestures(
-                    onPress = {
-                        if (!isAlarmActive) {
-                            isPressed = true
-                            tryAwaitRelease()
-                            isPressed = false
-                        }
-                    },
-                    onTap = { offset ->
-                        if (isAlarmActive) {
-                            if (isInCancelZone(offset.x, offset.y, size.width.toFloat(), cancelPx)) {
-                                isPressed = false
-                                isAlarmActive = false
-                                onCancel()
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+
+                    if (isAlarmActive) {
+                        var released = false
+                        while (!released) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change != null && !change.pressed) {
+                                if (isInCancelZone(change.position.x, change.position.y, size.width.toFloat(), cancelPx)) {
+                                    isPressed = false
+                                    isAlarmActive = false
+                                    onCancel()
+                                }
+                                released = true
                             }
-                        } else {
+                        }
+                    } else {
+                        val longPress = awaitLongPressOrCancellation(down.id)
+
+                        if (longPress == null) {
                             onShortPress()
-                        }
-                    }
-                )
-            }
-            .pointerInput(isAlarmActive) {
-                if (isAlarmActive) return@pointerInput
-                val cancelPx = 72.dp.toPx()
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { isPressed = true },
-                    onDrag = { change, _ ->
-                        val inZone = isInCancelZone(change.position.x, change.position.y, size.width.toFloat(), cancelPx)
-                        if (inZone != cancelHovered) cancelHovered = inZone
-                    },
-                    onDragEnd = {
-                        if (cancelHovered) {
-                            onCancel()
                         } else {
-                            onLongPressRelease()
-                            isAlarmActive = true
+                            isPressed = true
+
+                            var released = false
+                            while (!released) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change != null) {
+                                    if (!change.pressed) {
+                                        released = true
+                                    } else {
+                                        val inZone = isInCancelZone(change.position.x, change.position.y, size.width.toFloat(), cancelPx)
+                                        if (inZone != cancelHovered) cancelHovered = inZone
+                                        change.consume()
+                                    }
+                                }
+                            }
+
+                            if (cancelHovered) {
+                                onCancel()
+                            } else {
+                                onLongPressRelease()
+                                isAlarmActive = true
+                            }
+                            isPressed = false
+                            cancelHovered = false
                         }
-                        isPressed = false
-                        cancelHovered = false
-                    },
-                    onDragCancel = {
-                        isPressed = false
-                        cancelHovered = false
                     }
-                )
+                }
             }
             .padding(24.dp)
     ) {
