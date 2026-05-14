@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,18 +31,28 @@ class MapViewModel(
 
     private val defaultLocation = LatLng(52.5200, 13.4050)
 
+    private val _savedCameraPosition = MutableStateFlow(
+        CameraPosition.fromLatLngZoom(defaultLocation, 12f)
+    )
+    val savedCameraPosition: StateFlow<CameraPosition> = _savedCameraPosition.asStateFlow()
+
+    private var hasFetchedOnce = false
+    var hasAnimated = false
+
     fun fetchLocation() {
+        if (hasFetchedOnce) return
+        hasFetchedOnce = true
         viewModelScope.launch {
             _uiState.value = MapUiState.Loading
             try {
                 fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-                    if (location != null) {
-                        _uiState.value = MapUiState.Location(
-                            LatLng(location.latitude, location.longitude)
-                        )
+                    val latLng = if (location != null) {
+                        LatLng(location.latitude, location.longitude)
                     } else {
-                        _uiState.value = MapUiState.Location(defaultLocation)
+                        defaultLocation
                     }
+                    _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
+                    _uiState.value = MapUiState.Location(latLng)
                 }.addOnFailureListener {
                     _uiState.value = MapUiState.Location(defaultLocation)
                 }
@@ -49,5 +60,9 @@ class MapViewModel(
                 _uiState.value = MapUiState.Location(defaultLocation)
             }
         }
+    }
+
+    fun updateSavedCameraPosition(cameraPosition: CameraPosition) {
+        _savedCameraPosition.value = cameraPosition
     }
 }

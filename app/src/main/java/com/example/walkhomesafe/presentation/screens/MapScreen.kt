@@ -1,12 +1,22 @@
 package com.example.walkhomesafe.presentation.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,17 +29,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.viewmodel.MapUiState
 import com.example.walkhomesafe.viewmodel.MapViewModel
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlinx.coroutines.delay
 
 @Composable
 fun MapScreen(
@@ -37,6 +48,7 @@ fun MapScreen(
 ) {
     val context = LocalContext.current
     val uiState by mapViewModel.uiState.collectAsState()
+    val savedCameraPosition by mapViewModel.savedCameraPosition.collectAsState()
     var isLocationGranted by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -64,10 +76,21 @@ fun MapScreen(
     }
 
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(
-            LatLng(52.5200, 13.4050),
-            12f
-        )
+        position = savedCameraPosition
+    }
+
+    LaunchedEffect(cameraPositionState.position) {
+        mapViewModel.updateSavedCameraPosition(cameraPositionState.position)
+    }
+
+    val locationManager = remember { context.getSystemService(Context.LOCATION_SERVICE) as LocationManager }
+    var isGpsEnabled by remember { mutableStateOf(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            delay(3000)
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -75,7 +98,9 @@ fun MapScreen(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             uiSettings = MapUiSettings(myLocationButtonEnabled = isLocationGranted),
-            properties = MapProperties(isMyLocationEnabled = isLocationGranted)
+            properties = MapProperties(
+                isMyLocationEnabled = isLocationGranted
+            ),
         )
 
         when (val state = uiState) {
@@ -86,13 +111,13 @@ fun MapScreen(
                 )
             }
             is MapUiState.Location -> {
-                LaunchedEffect(state.latLng) {
-                    cameraPositionState.animate(
-                        CameraUpdateFactory.newLatLngZoom(
-                            state.latLng,
-                            15f
+                if (!mapViewModel.hasAnimated) {
+                    LaunchedEffect(state.latLng) {
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLngZoom(state.latLng, 15f)
                         )
-                    )
+                        mapViewModel.hasAnimated = true
+                    }
                 }
             }
             is MapUiState.Error -> {
@@ -102,6 +127,35 @@ fun MapScreen(
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyLarge
                 )
+            }
+        }
+
+        if (!isGpsEnabled) {
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = "GPS ist deaktiviert. Aktiviere GPS für eine genaue Standortbestimmung.",
+                        modifier = Modifier.padding(start = 8.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
         }
     }
