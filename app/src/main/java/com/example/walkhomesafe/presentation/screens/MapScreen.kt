@@ -86,9 +86,16 @@ fun MapScreen(
     val locationManager = remember { context.getSystemService(Context.LOCATION_SERVICE) as LocationManager }
     var isGpsEnabled by remember { mutableStateOf(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) }
 
+    var wasGpsOff by remember { mutableStateOf(!isGpsEnabled) }
+
     LaunchedEffect(Unit) {
         while (true) {
-            isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            val current = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            isGpsEnabled = current
+            if (current && wasGpsOff) {
+                mapViewModel.requestLocationRefresh()
+            }
+            wasGpsOff = !current
             delay(3000)
         }
     }

@@ -6,6 +6,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,7 +47,10 @@ class MapViewModel(
         viewModelScope.launch {
             _uiState.value = MapUiState.Loading
             try {
-                fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                fusedLocationClient.getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    CancellationTokenSource().token
+                ).addOnSuccessListener { location: Location? ->
                     val latLng = if (location != null) {
                         LatLng(location.latitude, location.longitude)
                     } else {
@@ -64,5 +69,29 @@ class MapViewModel(
 
     fun updateSavedCameraPosition(cameraPosition: CameraPosition) {
         _savedCameraPosition.value = cameraPosition
+    }
+
+    fun requestLocationRefresh() {
+        hasAnimated = false
+        viewModelScope.launch {
+            try {
+                fusedLocationClient.getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    CancellationTokenSource().token
+                ).addOnSuccessListener { location: Location? ->
+                    val latLng = if (location != null) {
+                        LatLng(location.latitude, location.longitude)
+                    } else {
+                        defaultLocation
+                    }
+                    _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
+                    _uiState.value = MapUiState.Location(latLng)
+                }.addOnFailureListener {
+                    _uiState.value = MapUiState.Location(defaultLocation)
+                }
+            } catch (e: SecurityException) {
+                _uiState.value = MapUiState.Location(defaultLocation)
+            }
+        }
     }
 }
