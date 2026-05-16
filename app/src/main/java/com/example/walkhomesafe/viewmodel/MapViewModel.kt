@@ -27,26 +27,52 @@ class MapViewModel(
 
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(application)
-
     private val _uiState = MutableStateFlow<MapUiState>(MapUiState.Loading)
-    val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
-
     private val defaultLocation = LatLng(52.5200, 13.4050)
-
     private val _savedCameraPosition = MutableStateFlow(
         CameraPosition.fromLatLngZoom(defaultLocation, 12f)
     )
-    val savedCameraPosition: StateFlow<CameraPosition> = _savedCameraPosition.asStateFlow()
-
     private var hasFetchedOnce = false
-    var hasAnimated = false
-
     private val _autoFocusTrigger = MutableStateFlow(0L)
+
+    val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
+    val savedCameraPosition: StateFlow<CameraPosition> = _savedCameraPosition.asStateFlow()
+    var hasAnimated = false
     val autoFocusTrigger: StateFlow<Long> = _autoFocusTrigger.asStateFlow()
 
-    private fun updateUiWithLocation(latLng: LatLng) {
-        _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
-        _uiState.value = MapUiState.Location(latLng)
+    fun fetchLocation() {
+        if (hasFetchedOnce) return
+        hasFetchedOnce = true
+        viewModelScope.launch {
+            _uiState.value = MapUiState.Loading
+            tryFetchCurrentLocation(true)
+        }
+    }
+
+    fun updateSavedCameraPosition(cameraPosition: CameraPosition) {
+        _savedCameraPosition.value = cameraPosition
+    }
+
+    fun requestLocationRefresh() {
+        hasAnimated = false
+        viewModelScope.launch {
+            tryFetchCurrentLocation(false)
+        }
+    }
+
+    private fun tryFetchCurrentLocation(fallbackToDefault: Boolean) {
+        try {
+            fusedLocationClient.getCurrentLocation(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                CancellationTokenSource().token
+            ).addOnSuccessListener { location: Location? ->
+                handleLocationResult(location, fallbackToDefault = fallbackToDefault)
+            }.addOnFailureListener {
+                handleLocationResult(null, fallbackToDefault = fallbackToDefault)
+            }
+        } catch (e: SecurityException) {
+            updateUiWithLocation(defaultLocation)
+        }
     }
 
     private fun handleLocationResult(location: Location?, fallbackToDefault: Boolean) {
@@ -73,45 +99,8 @@ class MapViewModel(
         }
     }
 
-    fun fetchLocation() {
-        if (hasFetchedOnce) return
-        hasFetchedOnce = true
-        viewModelScope.launch {
-            _uiState.value = MapUiState.Loading
-            try {
-                fusedLocationClient.getCurrentLocation(
-                    Priority.PRIORITY_HIGH_ACCURACY,
-                    CancellationTokenSource().token
-                ).addOnSuccessListener { location: Location? ->
-                    handleLocationResult(location, fallbackToDefault = true)
-                }.addOnFailureListener {
-                    handleLocationResult(null, fallbackToDefault = true)
-                }
-            } catch (e: SecurityException) {
-                updateUiWithLocation(defaultLocation)
-            }
-        }
-    }
-
-    fun updateSavedCameraPosition(cameraPosition: CameraPosition) {
-        _savedCameraPosition.value = cameraPosition
-    }
-
-    fun requestLocationRefresh() {
-        hasAnimated = false
-        viewModelScope.launch {
-            try {
-                fusedLocationClient.getCurrentLocation(
-                    Priority.PRIORITY_HIGH_ACCURACY,
-                    CancellationTokenSource().token
-                ).addOnSuccessListener { location: Location? ->
-                    handleLocationResult(location, fallbackToDefault = false)
-                }.addOnFailureListener {
-                    handleLocationResult(null, fallbackToDefault = false)
-                }
-            } catch (e: SecurityException) {
-                updateUiWithLocation(defaultLocation)
-            }
-        }
+    private fun updateUiWithLocation(latLng: LatLng) {
+        _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
+        _uiState.value = MapUiState.Location(latLng)
     }
 }
