@@ -41,6 +41,31 @@ class MapViewModel(
     private var hasFetchedOnce = false
     var hasAnimated = false
 
+    private val _autoFocusTrigger = MutableStateFlow(0L)
+    val autoFocusTrigger: StateFlow<Long> = _autoFocusTrigger.asStateFlow()
+
+    private fun updateUiWithLocation(latLng: LatLng) {
+        _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
+        _uiState.value = MapUiState.Location(latLng)
+    }
+
+    private fun handleLocationResult(location: Location?, fallbackToDefault: Boolean) {
+        if (location != null) {
+            updateUiWithLocation(LatLng(location.latitude, location.longitude))
+            _autoFocusTrigger.value = System.nanoTime()
+        } else {
+            fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
+                if (lastLocation != null) {
+                    updateUiWithLocation(LatLng(lastLocation.latitude, lastLocation.longitude))
+                    _autoFocusTrigger.value = System.nanoTime()
+                } else if (fallbackToDefault) {
+                    updateUiWithLocation(defaultLocation)
+                    _autoFocusTrigger.value = System.nanoTime()
+                }
+            }
+        }
+    }
+
     fun fetchLocation() {
         if (hasFetchedOnce) return
         hasFetchedOnce = true
@@ -51,18 +76,12 @@ class MapViewModel(
                     Priority.PRIORITY_HIGH_ACCURACY,
                     CancellationTokenSource().token
                 ).addOnSuccessListener { location: Location? ->
-                    val latLng = if (location != null) {
-                        LatLng(location.latitude, location.longitude)
-                    } else {
-                        defaultLocation
-                    }
-                    _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
-                    _uiState.value = MapUiState.Location(latLng)
+                    handleLocationResult(location, fallbackToDefault = true)
                 }.addOnFailureListener {
-                    _uiState.value = MapUiState.Location(defaultLocation)
+                    handleLocationResult(null, fallbackToDefault = true)
                 }
             } catch (e: SecurityException) {
-                _uiState.value = MapUiState.Location(defaultLocation)
+                updateUiWithLocation(defaultLocation)
             }
         }
     }
@@ -79,18 +98,12 @@ class MapViewModel(
                     Priority.PRIORITY_HIGH_ACCURACY,
                     CancellationTokenSource().token
                 ).addOnSuccessListener { location: Location? ->
-                    val latLng = if (location != null) {
-                        LatLng(location.latitude, location.longitude)
-                    } else {
-                        defaultLocation
-                    }
-                    _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
-                    _uiState.value = MapUiState.Location(latLng)
+                    handleLocationResult(location, fallbackToDefault = false)
                 }.addOnFailureListener {
-                    _uiState.value = MapUiState.Location(defaultLocation)
+                    handleLocationResult(null, fallbackToDefault = false)
                 }
             } catch (e: SecurityException) {
-                _uiState.value = MapUiState.Location(defaultLocation)
+                updateUiWithLocation(defaultLocation)
             }
         }
     }

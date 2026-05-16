@@ -75,6 +75,8 @@ fun MapScreen(
         }
     }
 
+    val autoFocusTrigger by mapViewModel.autoFocusTrigger.collectAsState()
+
     val cameraPositionState = rememberCameraPositionState {
         position = savedCameraPosition
     }
@@ -118,8 +120,8 @@ fun MapScreen(
                 )
             }
             is MapUiState.Location -> {
-                if (!mapViewModel.hasAnimated) {
-                    LaunchedEffect(state.latLng) {
+                LaunchedEffect(state.latLng, autoFocusTrigger) {
+                    if (!mapViewModel.hasAnimated) {
                         cameraPositionState.animate(
                             CameraUpdateFactory.newLatLngZoom(state.latLng, 15f)
                         )
