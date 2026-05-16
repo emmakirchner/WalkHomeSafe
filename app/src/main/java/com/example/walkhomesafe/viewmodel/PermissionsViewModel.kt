@@ -37,6 +37,8 @@ class PermissionsViewModel(
         ) {
             pendingStartupPermissions.add(PermissionIntent.Notifications)
         }
+        if (!hasPermission(Manifest.permission.ACCESS_FINE_LOCATION))
+            pendingStartupPermissions.add(PermissionIntent.AccessFineLocation)
         requestNextStartupPermission()
     }
 
@@ -102,6 +104,20 @@ class PermissionsViewModel(
             }
         }
     }
+
+    fun requestAccessFineLocation(onGranted: () -> Unit) {
+        if (hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            onGranted()
+        } else {
+            pendingAction = onGranted
+            viewModelScope.launch {
+                _permissionRequests.emit(PermissionIntent.AccessFineLocation)
+            }
+        }
+    }
+
+    fun hasFineLocationPermission(): Boolean =
+        hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
 
     private fun hasPermission(permission: String): Boolean =
         ContextCompat.checkSelfPermission(

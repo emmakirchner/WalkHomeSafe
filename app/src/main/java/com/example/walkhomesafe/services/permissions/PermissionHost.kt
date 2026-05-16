@@ -34,6 +34,13 @@ fun PermissionHost(
             onResult(granted)
         }
 
+    val locationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            onResult(granted)
+        }
+
     LaunchedEffect(Unit) {
         permissionFlow.collect { request ->
             when (request) {
@@ -52,6 +59,11 @@ fun PermissionHost(
                 PermissionIntent.ReadContacts ->
                     contactsPermissionLauncher.launch(
                         Manifest.permission.READ_CONTACTS
+                    )
+
+                PermissionIntent.AccessFineLocation ->
+                    locationPermissionLauncher.launch(
+                        Manifest.permission.ACCESS_FINE_LOCATION
                     )
             }
         }

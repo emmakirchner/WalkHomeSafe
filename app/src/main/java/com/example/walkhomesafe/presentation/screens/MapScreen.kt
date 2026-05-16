@@ -1,11 +1,7 @@
 package com.example.walkhomesafe.presentation.screens
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.location.LocationManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.viewmodel.MapUiState
 import com.example.walkhomesafe.viewmodel.MapViewModel
@@ -40,38 +35,21 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 import kotlinx.coroutines.delay
 
 @Composable
 fun MapScreen(
-    mapViewModel: MapViewModel = viewModel()
+    mapViewModel: MapViewModel = viewModel(),
+    permissionsViewModel: PermissionsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val uiState by mapViewModel.uiState.collectAsState()
     val savedCameraPosition by mapViewModel.savedCameraPosition.collectAsState()
-    var isLocationGranted by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-
-    val locationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        isLocationGranted = granted
-        if (granted) {
-            mapViewModel.fetchLocation()
-        }
-    }
 
     LaunchedEffect(Unit) {
-        if (isLocationGranted) {
+        permissionsViewModel.requestAccessFineLocation {
             mapViewModel.fetchLocation()
-        } else {
-            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
@@ -106,9 +84,9 @@ fun MapScreen(
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            uiSettings = MapUiSettings(myLocationButtonEnabled = isLocationGranted),
+            uiSettings = MapUiSettings(myLocationButtonEnabled = permissionsViewModel.hasFineLocationPermission()),
             properties = MapProperties(
-                isMyLocationEnabled = isLocationGranted
+                isMyLocationEnabled = permissionsViewModel.hasFineLocationPermission()
             ),
         )
 

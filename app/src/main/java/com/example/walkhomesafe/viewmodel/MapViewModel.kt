@@ -54,11 +54,18 @@ class MapViewModel(
             updateUiWithLocation(LatLng(location.latitude, location.longitude))
             _autoFocusTrigger.value = System.nanoTime()
         } else {
-            fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
-                if (lastLocation != null) {
-                    updateUiWithLocation(LatLng(lastLocation.latitude, lastLocation.longitude))
-                    _autoFocusTrigger.value = System.nanoTime()
-                } else if (fallbackToDefault) {
+            try {
+                fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
+                    if (lastLocation != null) {
+                        updateUiWithLocation(LatLng(lastLocation.latitude, lastLocation.longitude))
+                        _autoFocusTrigger.value = System.nanoTime()
+                    } else if (fallbackToDefault) {
+                        updateUiWithLocation(defaultLocation)
+                        _autoFocusTrigger.value = System.nanoTime()
+                    }
+                }
+            } catch (e: SecurityException) {
+                if (fallbackToDefault) {
                     updateUiWithLocation(defaultLocation)
                     _autoFocusTrigger.value = System.nanoTime()
                 }
