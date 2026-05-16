@@ -19,33 +19,27 @@ class PermissionsViewModel(
     private val context = getApplication<Application>()
 
     private val _permissionRequests =
-        MutableSharedFlow<PermissionIntent>()
+        MutableSharedFlow<PermissionIntent>(
+            extraBufferCapacity = 4
+        )
 
     val permissionRequests = _permissionRequests.asSharedFlow()
 
     private var pendingAction: (() -> Unit)? = null
-    private val pendingStartupPermissions = mutableListOf<PermissionIntent>()
 
-    fun requestStartupPermissions() {
-        pendingStartupPermissions.clear()
+    fun getPendingStartupPermissions(): List<PermissionIntent> {
+        val pending = mutableListOf<PermissionIntent>()
         if (!hasPermission(Manifest.permission.READ_CONTACTS))
-            pendingStartupPermissions.add(PermissionIntent.ReadContacts)
+            pending.add(PermissionIntent.ReadContacts)
         if (!hasPermission(Manifest.permission.SEND_SMS))
-            pendingStartupPermissions.add(PermissionIntent.SendSms)
+            pending.add(PermissionIntent.SendSms)
         if (Build.VERSION.SDK_INT >= 33 &&
             !hasPermission(Manifest.permission.POST_NOTIFICATIONS)
-        ) {
-            pendingStartupPermissions.add(PermissionIntent.Notifications)
-        }
-        requestNextStartupPermission()
-    }
-
-    private fun requestNextStartupPermission() {
-        if (pendingStartupPermissions.isEmpty()) return
-        val intent = pendingStartupPermissions.removeAt(0)
-        viewModelScope.launch {
-            _permissionRequests.emit(intent)
-        }
+        )
+            pending.add(PermissionIntent.Notifications)
+        if (!hasPermission(Manifest.permission.ACCESS_FINE_LOCATION))
+            pending.add(PermissionIntent.AccessFineLocation)
+        return pending
     }
 
     fun onPermissionResult(granted: Boolean) {
@@ -53,7 +47,6 @@ class PermissionsViewModel(
             pendingAction?.invoke()
         }
         pendingAction = null
-        requestNextStartupPermission()
     }
 
     fun requestSendSms(onGranted: () -> Unit) {
@@ -102,6 +95,20 @@ class PermissionsViewModel(
             }
         }
     }
+
+    fun requestAccessFineLocation(onGranted: () -> Unit) {
+        if (hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            onGranted()
+        } else {
+            pendingAction = onGranted
+            viewModelScope.launch {
+                _permissionRequests.emit(PermissionIntent.AccessFineLocation)
+            }
+        }
+    }
+
+    fun hasFineLocationPermission(): Boolean =
+        hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
 
     private fun hasPermission(permission: String): Boolean =
         ContextCompat.checkSelfPermission(

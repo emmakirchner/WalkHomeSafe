@@ -11,8 +11,17 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun PermissionHost(
     permissionFlow: Flow<PermissionIntent>,
+    startupPermissions: List<PermissionIntent>,
     onResult: (granted: Boolean) -> Unit
 ) {
+    val multiplePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results: Map<String, Boolean> ->
+        results.forEach { (_, granted) ->
+            onResult(granted)
+        }
+    }
+
     val smsPermissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -34,26 +43,58 @@ fun PermissionHost(
             onResult(granted)
         }
 
+    val locationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            onResult(granted)
+        }
+
+    fun permissionString(intent: PermissionIntent): String = when (intent) {
+        PermissionIntent.SendSms -> Manifest.permission.SEND_SMS
+        PermissionIntent.Notifications -> Manifest.permission.POST_NOTIFICATIONS
+        PermissionIntent.ReadContacts -> Manifest.permission.READ_CONTACTS
+        PermissionIntent.AccessFineLocation -> Manifest.permission.ACCESS_FINE_LOCATION
+    }
+
+    fun launchPermission(intent: PermissionIntent) {
+        when (intent) {
+            PermissionIntent.SendSms ->
+                smsPermissionLauncher.launch(
+                    Manifest.permission.SEND_SMS
+                )
+
+            PermissionIntent.Notifications ->
+                if (Build.VERSION.SDK_INT >= 33) {
+                    notificationPermissionLauncher.launch(
+                        Manifest.permission.POST_NOTIFICATIONS
+                    )
+                }
+
+            PermissionIntent.ReadContacts ->
+                contactsPermissionLauncher.launch(
+                    Manifest.permission.READ_CONTACTS
+                )
+
+            PermissionIntent.AccessFineLocation ->
+                locationPermissionLauncher.launch(
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+        }
+    }
+
+    LaunchedEffect(startupPermissions) {
+        if (startupPermissions.isNotEmpty()) {
+            val perms = startupPermissions
+                .map { permissionString(it) }
+                .toTypedArray()
+            multiplePermissionLauncher.launch(perms)
+        }
+    }
+
     LaunchedEffect(Unit) {
         permissionFlow.collect { request ->
-            when (request) {
-                PermissionIntent.SendSms ->
-                    smsPermissionLauncher.launch(
-                        Manifest.permission.SEND_SMS
-                    )
-
-                PermissionIntent.Notifications ->
-                    if (Build.VERSION.SDK_INT >= 33) {
-                        notificationPermissionLauncher.launch(
-                            Manifest.permission.POST_NOTIFICATIONS
-                        )
-                    }
-
-                PermissionIntent.ReadContacts ->
-                    contactsPermissionLauncher.launch(
-                        Manifest.permission.READ_CONTACTS
-                    )
-            }
+            launchPermission(request)
         }
     }
 }
