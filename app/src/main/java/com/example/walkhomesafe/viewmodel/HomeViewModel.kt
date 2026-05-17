@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import com.example.walkhomesafe.services.MessageSender
 import com.example.walkhomesafe.model.EmergencyContact
 import com.example.walkhomesafe.services.EmergencyAlarmService
+import com.google.android.gms.maps.model.LatLng
 
 class HomeViewModel(
     application: Application
@@ -15,21 +16,29 @@ class HomeViewModel(
     private val context = getApplication<Application>()
     private val messageSender = MessageSender(context)
 
-    fun onSendMessage(
-        contacts: List<EmergencyContact>,
-        message: String
-    ) {
-        messageSender.send(
-            contacts = contacts,
-            message = message
-        )
+    private companion object {
+        private const val LOCATION_PLACEHOLDER = "[STANDORT-LINK]"
     }
 
-    fun onSendMessageAndAlarm(
+    fun onSendMessage(
         contacts: List<EmergencyContact>,
-        message: String
+        message: String,
+        locationLatLng: LatLng? = null
     ) {
-        onSendMessage(contacts, message)
+        val finalMessage = if (locationLatLng != null) {
+            val link = "https://maps.google.com/?q=${locationLatLng.latitude},${locationLatLng.longitude}"
+            if (message.contains(LOCATION_PLACEHOLDER)) {
+                message.replace(LOCATION_PLACEHOLDER, link)
+            } else {
+                "$message\n$link"
+            }
+        } else {
+            message.replace(LOCATION_PLACEHOLDER, "")
+        }
+        messageSender.send(contacts, finalMessage)
+    }
+
+    fun startAlarm() {
         startAlarmService()
     }
 

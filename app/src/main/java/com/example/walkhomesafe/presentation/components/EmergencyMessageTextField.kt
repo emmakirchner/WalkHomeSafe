@@ -1,7 +1,9 @@
 package com.example.walkhomesafe.presentation.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -24,6 +26,9 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+private const val LOCATION_PLACEHOLDER = "[STANDORT-LINK]"
+private const val MAX_MESSAGE_LENGTH = 110
+
 @Composable
 fun EmergencyMessageTextField(
     value: String,
@@ -32,6 +37,9 @@ fun EmergencyMessageTextField(
     var localMessage by rememberSaveable { mutableStateOf(value) }
     var hasFocus by remember { mutableStateOf(false) }
     val hasChanges = localMessage != value
+
+    val placeholderCount = localMessage.split(LOCATION_PLACEHOLDER).size - 1
+    val effectiveLength = localMessage.length - placeholderCount * LOCATION_PLACEHOLDER.length
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -52,7 +60,13 @@ fun EmergencyMessageTextField(
 
             TextField(
                 value = localMessage,
-                onValueChange = { localMessage = it },
+                onValueChange = {
+                    val count = it.split(LOCATION_PLACEHOLDER).size - 1
+                    val effective = it.length - count * LOCATION_PLACEHOLDER.length
+                    if (effective <= MAX_MESSAGE_LENGTH) {
+                        localMessage = it
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .onFocusChanged { hasFocus = it.isFocused },
@@ -62,6 +76,22 @@ fun EmergencyMessageTextField(
                     unfocusedIndicatorColor = Color.Transparent
                 )
             )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = "$effectiveLength / $MAX_MESSAGE_LENGTH",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (effectiveLength > MAX_MESSAGE_LENGTH)
+                        MaterialTheme.colorScheme.error
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             if (hasFocus && hasChanges) {
                 TextButton(
