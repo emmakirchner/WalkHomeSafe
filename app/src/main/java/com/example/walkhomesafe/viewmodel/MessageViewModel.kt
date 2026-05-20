@@ -13,17 +13,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+const val LOCATION_PLACEHOLDER = "[STANDORT-LINK]"
+const val MAX_MESSAGE_LENGTH = 110
+
 class MessageViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private companion object {
-        private const val LOCATION_PLACEHOLDER = "[STANDORT-LINK]"
-        private const val MAX_MESSAGE_LENGTH = 110
-    }
-
     private val DEFAULT_MESSAGE =
-        "NOTFALL! Ich bin hier: [STANDORT-LINK]. Bitte schaut sofort nach mir. Automatisierte Nachricht."
+        "NOTFALL! Ich bin hier: [STANDORT-LINK]. Bitte schaut sofort nach mir! (automatisierte Nachricht)"
 
     private val _message = MutableStateFlow(DEFAULT_MESSAGE)
     val message: StateFlow<String> = _message.asStateFlow()
@@ -37,18 +35,22 @@ class MessageViewModel(
     }
 
     fun updateMessage(newMessage: String) {
-        val parts = newMessage.split(LOCATION_PLACEHOLDER)
-        val placeholderCount = parts.size - 1
-        val effectiveLength = newMessage.length - placeholderCount * LOCATION_PLACEHOLDER.length
-        val truncated = if (effectiveLength <= MAX_MESSAGE_LENGTH) {
-            newMessage
-        } else if (placeholderCount == 0) {
-            newMessage.take(MAX_MESSAGE_LENGTH)
+        val firstIdx = newMessage.indexOf(LOCATION_PLACEHOLDER)
+        val cleaned = if (firstIdx != -1) {
+            val before = newMessage.substring(0, firstIdx + LOCATION_PLACEHOLDER.length)
+            val after = newMessage.substring(firstIdx + LOCATION_PLACEHOLDER.length)
+            before + after.replace(LOCATION_PLACEHOLDER, "")
         } else {
-            val overflow = effectiveLength - MAX_MESSAGE_LENGTH
-            val trimmedLast = parts.last().dropLast(overflow.coerceAtMost(parts.last().length))
-            parts.dropLast(1).joinToString(LOCATION_PLACEHOLDER) +
-                LOCATION_PLACEHOLDER + trimmedLast
+            newMessage
+        }
+
+        val parts = cleaned.split(LOCATION_PLACEHOLDER)
+        val placeholderCount = parts.size - 1
+        val effectiveLength = cleaned.length - placeholderCount * LOCATION_PLACEHOLDER.length
+        val truncated = if (effectiveLength <= MAX_MESSAGE_LENGTH) {
+            cleaned
+        } else  {
+            cleaned.take(MAX_MESSAGE_LENGTH)
         }
         _message.value = truncated
 

@@ -125,7 +125,7 @@ fun HomeScreen(
                 },
                 onLongPressRelease = {
                     permissionsViewModel.requestSendSmsAndNotifications {
-                        homeViewModel.startAlarm()
+                        homeViewModel.startAlarmService()
                         permissionsViewModel.requestAccessFineLocation(
                             onGranted = {
                                 scope.launch {
@@ -145,7 +145,7 @@ fun HomeScreen(
                         )
                     }
                 },
-                onCancel = homeViewModel::onCancelAlarm
+                onCancel = homeViewModel::stopAlarmService
             )
         }
 

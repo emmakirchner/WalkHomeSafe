@@ -16,6 +16,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,9 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-
-private const val LOCATION_PLACEHOLDER = "[STANDORT-LINK]"
-private const val MAX_MESSAGE_LENGTH = 110
+import com.example.walkhomesafe.viewmodel.LOCATION_PLACEHOLDER
+import com.example.walkhomesafe.viewmodel.MAX_MESSAGE_LENGTH
 
 @Composable
 fun EmergencyMessageTextField(
@@ -37,6 +37,7 @@ fun EmergencyMessageTextField(
     var localMessage by rememberSaveable { mutableStateOf(value) }
     var hasFocus by remember { mutableStateOf(false) }
     val hasChanges = localMessage != value
+    LaunchedEffect(value) { localMessage = value }
 
     val placeholderCount = localMessage.split(LOCATION_PLACEHOLDER).size - 1
     val effectiveLength = localMessage.length - placeholderCount * LOCATION_PLACEHOLDER.length
@@ -54,9 +55,23 @@ fun EmergencyMessageTextField(
             Text(
                 text = "Notfall‑Nachricht",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 16.dp)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = "$effectiveLength / $MAX_MESSAGE_LENGTH",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (effectiveLength >= MAX_MESSAGE_LENGTH)
+                        MaterialTheme.colorScheme.error
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             TextField(
                 value = localMessage,
@@ -76,22 +91,6 @@ fun EmergencyMessageTextField(
                     unfocusedIndicatorColor = Color.Transparent
                 )
             )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Text(
-                    text = "$effectiveLength / $MAX_MESSAGE_LENGTH",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (effectiveLength > MAX_MESSAGE_LENGTH)
-                        MaterialTheme.colorScheme.error
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
 
             if (hasFocus && hasChanges) {
                 TextButton(
