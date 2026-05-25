@@ -37,15 +37,18 @@ import com.example.walkhomesafe.model.NearbyPlace
 import com.example.walkhomesafe.model.PlaceType
 import com.example.walkhomesafe.viewmodel.MapUiState
 import com.example.walkhomesafe.viewmodel.MapViewModel
+import android.util.Log
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.example.walkhomesafe.R
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 import kotlinx.coroutines.delay
 
@@ -77,6 +80,15 @@ fun MapScreen(
     val showPublicLocations by mapViewModel.showPublicLocations.collectAsState()
     val nearbyPlaces by mapViewModel.nearbyPlaces.collectAsState()
 
+    val mapStyleOptions = remember(context) {
+        try {
+            MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark_no_pois)
+        } catch (e: Exception) {
+            Log.e("MapScreen", "Error loading map style", e)
+            null
+        }
+    }
+
     val locationManager = remember { context.getSystemService(Context.LOCATION_SERVICE) as LocationManager }
     var isGpsEnabled by remember { mutableStateOf(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) }
 
@@ -100,7 +112,8 @@ fun MapScreen(
             cameraPositionState = cameraPositionState,
             uiSettings = MapUiSettings(myLocationButtonEnabled = permissionsViewModel.hasFineLocationPermission()),
             properties = MapProperties(
-                isMyLocationEnabled = permissionsViewModel.hasFineLocationPermission()
+                isMyLocationEnabled = permissionsViewModel.hasFineLocationPermission(),
+                mapStyleOptions = mapStyleOptions
             ),
         ) {
             if (showPublicLocations) {
