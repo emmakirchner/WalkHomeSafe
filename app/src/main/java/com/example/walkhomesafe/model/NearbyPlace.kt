@@ -34,5 +34,6 @@ data class NearbyPlace(
     val latLng: LatLng,
     val placeType: PlaceType,
     val isOpenNow: Boolean? = null,
-    val address: String? = null
+    val address: String? = null,
+    val closingTime: String? = null
 )

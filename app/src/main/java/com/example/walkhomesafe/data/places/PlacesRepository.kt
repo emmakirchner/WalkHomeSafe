@@ -79,7 +79,9 @@ class PlacesRepository(context: Context) {
             }
 
             if (places.isEmpty() && useMockFallback) {
-                Result.success(getMockPlaces(currentLocation))
+                val filteredMockPlaces = getMockPlaces(currentLocation)
+                    .filter { it.isOpenNow != false }
+                Result.success(filteredMockPlaces)
             } else {
                 Result.success(places)
             }
@@ -87,14 +89,18 @@ class PlacesRepository(context: Context) {
         } catch (e: ApiException) {
             Log.e("PlacesRepository", "Places API error: ${e.statusCode}", e)
             if (useMockFallback) {
-                Result.success(getMockPlaces(currentLocation))
+                val filteredMockPlaces = getMockPlaces(currentLocation)
+                    .filter { it.isOpenNow != false }
+                Result.success(filteredMockPlaces)
             } else {
                 Result.failure<List<NearbyPlace>>(e)
             }
         } catch (e: Exception) {
             Log.e("PlacesRepository", "Error fetching nearby places", e)
             if (useMockFallback) {
-                Result.success(getMockPlaces(currentLocation))
+                val filteredMockPlaces = getMockPlaces(currentLocation)
+                    .filter { it.isOpenNow != false }
+                Result.success(filteredMockPlaces)
             } else {
                 Result.failure<List<NearbyPlace>>(e)
             }
@@ -111,13 +117,24 @@ class PlacesRepository(context: Context) {
 
         val isOpen = isPlaceCurrentlyOpen(place)
 
+        if (isOpen == false) {
+            return null
+        }
+
+        val closingTime = if (isOpen == true) {
+            getTodayClosingTime(place)
+        } else {
+            null
+        }
+
         return NearbyPlace(
             id = place.id ?: "",
             name = place.displayName ?: "Unbekannt",
             latLng = location,
             placeType = matchedType,
             isOpenNow = isOpen,
-            address = place.formattedAddress
+            address = place.formattedAddress,
+            closingTime = closingTime
         )
     }
 
@@ -133,6 +150,88 @@ class PlacesRepository(context: Context) {
 
     private fun dayOfWeekValue(dayName: String): Int {
         return dayOfWeekToNumber[dayName] ?: 1
+    }
+
+    private fun formatLocalTime(hours: Int, minutes: Int): String {
+        val hourStr = hours.toString().padStart(2, '0')
+        val minuteStr = minutes.toString().padStart(2, '0')
+        return "$hourStr:$minuteStr"
+    }
+
+    private fun getTodayClosingTime(place: Place): String? {
+        val utcOffsetMinutes = place.utcOffsetMinutes
+
+        val currentOpeningHours = place.currentOpeningHours
+        if (currentOpeningHours != null) {
+            val result = findActivePeriodClosingTime(currentOpeningHours, utcOffsetMinutes)
+            if (result != null) return result
+        }
+
+        val regularOpeningHours = place.openingHours
+        if (regularOpeningHours != null) {
+            return findActivePeriodClosingTime(regularOpeningHours, utcOffsetMinutes)
+        }
+
+        return null
+    }
+
+    private fun findActivePeriodClosingTime(
+        openingHours: OpeningHours,
+        utcOffsetMinutes: Int?
+    ): String? {
+        val periods = openingHours.periods
+        if (periods.isNullOrEmpty()) return null
+
+        val nowUtc = Instant.now()
+        val localTimeMillis = nowUtc.toEpochMilli() + (utcOffsetMinutes ?: 0) * 60_000L
+
+        val localInstant = Instant.ofEpochMilli(localTimeMillis)
+        val localDateTime = localInstant.atZone(ZoneOffset.UTC).toLocalDateTime()
+        val currentDayName = localDateTime.dayOfWeek.name
+        val currentTimeMinutes = localDateTime.hour * 60 + localDateTime.minute
+
+        for (period in periods) {
+            val open = period.open ?: continue
+
+            if (period.close == null) {
+                val openDayName = open.day.name
+                val openTimeMinutes = open.time.hours * 60 + open.time.minutes
+
+                if (isTimeInPeriod(
+                        currentDayName,
+                        currentTimeMinutes,
+                        openDayName,
+                        openTimeMinutes,
+                        openDayName,
+                        24 * 60
+                    )
+                ) {
+                    return "24/7"
+                }
+                continue
+            }
+
+            val openDayName = open.day.name
+            val openTimeMinutes = open.time.hours * 60 + open.time.minutes
+            val closeDayName = period.close!!.day.name
+            val closeTimeMinutes = period.close!!.time.hours * 60 + period.close!!.time.minutes
+
+            if (isTimeInPeriod(
+                    currentDayName,
+                    currentTimeMinutes,
+                    openDayName,
+                    openTimeMinutes,
+                    closeDayName,
+                    closeTimeMinutes
+                )
+            ) {
+                val closeHour = period.close!!.time.hours
+                val closeMin = period.close!!.time.minutes
+                return formatLocalTime(closeHour, closeMin)
+            }
+        }
+
+        return null
     }
 
     private fun isPlaceCurrentlyOpen(place: Place): Boolean? {
@@ -249,63 +348,86 @@ class PlacesRepository(context: Context) {
                 name = "Cafe am Markt",
                 latLng = LatLng(baseLat + 0.001, baseLng + 0.001),
                 placeType = PlaceType.CAFE,
-                isOpenNow = true
+                isOpenNow = true,
+                closingTime = "22:00"
             ),
             NearbyPlace(
                 id = "mock_2",
                 name = "Stadtbibliothek",
                 latLng = LatLng(baseLat - 0.0015, baseLng + 0.002),
                 placeType = PlaceType.LIBRARY,
-                isOpenNow = true
+                isOpenNow = true,
+                closingTime = "18:00"
             ),
             NearbyPlace(
                 id = "mock_3",
                 name = "REWE Supermarkt",
                 latLng = LatLng(baseLat + 0.002, baseLng - 0.001),
                 placeType = PlaceType.SUPERMARKET,
-                isOpenNow = true
+                isOpenNow = true,
+                closingTime = "20:00"
             ),
             NearbyPlace(
                 id = "mock_4",
                 name = "Pizzeria Roma",
                 latLng = LatLng(baseLat - 0.0005, baseLng - 0.002),
                 placeType = PlaceType.RESTAURANT,
-                isOpenNow = true
+                isOpenNow = true,
+                closingTime = "23:00"
             ),
             NearbyPlace(
                 id = "mock_5",
                 name = "Apotheke am Bahnhof",
                 latLng = LatLng(baseLat + 0.0008, baseLng - 0.0015),
                 placeType = PlaceType.PHARMACY,
-                isOpenNow = true
+                isOpenNow = true,
+                closingTime = "19:00"
             ),
             NearbyPlace(
                 id = "mock_6",
                 name = "Modehaus",
                 latLng = LatLng(baseLat - 0.001, baseLng + 0.0005),
                 placeType = PlaceType.SHOP,
-                isOpenNow = true
+                isOpenNow = true,
+                closingTime = "19:00"
             ),
             NearbyPlace(
                 id = "mock_7",
                 name = "Polizeiwache",
                 latLng = LatLng(baseLat + 0.0025, baseLng + 0.0025),
                 placeType = PlaceType.POLICE_STATION,
-                isOpenNow = null
+                isOpenNow = true,
+                closingTime = "24/7"
             ),
             NearbyPlace(
                 id = "mock_8",
                 name = "Krankenhaus Mitte",
                 latLng = LatLng(baseLat - 0.003, baseLng),
                 placeType = PlaceType.HOSPITAL,
-                isOpenNow = null
+                isOpenNow = true,
+                closingTime = "24/7"
             ),
             NearbyPlace(
                 id = "mock_9",
                 name = "Shell Tankstelle",
                 latLng = LatLng(baseLat, baseLng + 0.003),
                 placeType = PlaceType.GAS_STATION,
-                isOpenNow = true
+                isOpenNow = true,
+                closingTime = "24/7"
+            ),
+            NearbyPlace(
+                id = "mock_closed_1",
+                name = "Nachtclub Exclusiv",
+                latLng = LatLng(baseLat + 0.0015, baseLng - 0.0008),
+                placeType = PlaceType.RESTAURANT,
+                isOpenNow = false
+            ),
+            NearbyPlace(
+                id = "mock_closed_2",
+                name = "Feinkostladen am Dom",
+                latLng = LatLng(baseLat - 0.002, baseLng + 0.001),
+                placeType = PlaceType.SHOP,
+                isOpenNow = false
             )
         )
     }

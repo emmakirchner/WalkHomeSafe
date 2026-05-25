@@ -232,10 +232,18 @@ private fun PlaceMarker(
         MarkerState(position = place.latLng)
     }
 
+    val statusText = when {
+        place.closingTime == "24/7" -> "Geöffnet 24/7"
+        place.closingTime != null -> "Geöffnet bis ${place.closingTime} Uhr"
+        else -> "Geöffnet"
+    }
+
+    val snippetText = "${place.placeType.displayName} | $statusText"
+
     Marker(
         state = markerState,
         title = place.name,
-        snippet = place.placeType.displayName,
+        snippet = snippetText,
         icon = getMarkerIconForType(place.placeType)
     )
 }
