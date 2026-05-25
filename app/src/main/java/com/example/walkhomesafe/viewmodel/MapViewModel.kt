@@ -4,12 +4,15 @@ import android.app.Application
 import android.location.Location
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.walkhomesafe.data.places.PlacesRepository
+import com.example.walkhomesafe.model.NearbyPlace
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +32,8 @@ class MapViewModel(
 
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(application)
+    private val placesRepository: PlacesRepository = PlacesRepository(application)
+
     private val _uiState = MutableStateFlow<MapUiState>(MapUiState.Loading)
     private val defaultLocation = LatLng(52.5200, 13.4050)
     private val _savedCameraPosition = MutableStateFlow(
@@ -36,6 +41,18 @@ class MapViewModel(
     )
     private var hasFetchedOnce = false
     private val _autoFocusTrigger = MutableStateFlow(0L)
+
+    private val _showPublicLocations = MutableStateFlow(true)
+    val showPublicLocations: StateFlow<Boolean> = _showPublicLocations.asStateFlow()
+
+    private val _nearbyPlaces = MutableStateFlow<List<NearbyPlace>>(emptyList())
+    val nearbyPlaces: StateFlow<List<NearbyPlace>> = _nearbyPlaces.asStateFlow()
+
+    private val _isLoadingPlaces = MutableStateFlow(false)
+    val isLoadingPlaces: StateFlow<Boolean> = _isLoadingPlaces.asStateFlow()
+
+    private var currentLocation: LatLng? = null
+    private var placesFetchJob: Job? = null
 
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     val savedCameraPosition: StateFlow<CameraPosition> = _savedCameraPosition.asStateFlow()
@@ -65,6 +82,15 @@ class MapViewModel(
         }
     }
 
+    fun togglePublicLocationsFilter() {
+        val newValue = !_showPublicLocations.value
+        _showPublicLocations.value = newValue
+
+        if (newValue && _nearbyPlaces.value.isEmpty()) {
+            currentLocation?.let { fetchNearbyPlaces(it) }
+        }
+    }
+
     private fun tryFetchCurrentLocation(fallbackToDefault: Boolean): Boolean {
         return try {
             fusedLocationClient.getCurrentLocation(
@@ -86,24 +112,70 @@ class MapViewModel(
 
     private fun handleLocationResult(location: Location?, fallbackToDefault: Boolean) {
         if (location != null) {
-            updateUiWithLocation(LatLng(location.latitude, location.longitude))
+            val latLng = LatLng(location.latitude, location.longitude)
+            updateUiWithLocation(latLng)
             _autoFocusTrigger.value = System.nanoTime()
+            onLocationUpdated(latLng)
         } else {
             try {
                 fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
                     if (lastLocation != null) {
-                        updateUiWithLocation(LatLng(lastLocation.latitude, lastLocation.longitude))
+                        val latLng = LatLng(lastLocation.latitude, lastLocation.longitude)
+                        updateUiWithLocation(latLng)
                         _autoFocusTrigger.value = System.nanoTime()
+                        onLocationUpdated(latLng)
                     } else if (fallbackToDefault) {
                         updateUiWithLocation(defaultLocation)
                         _autoFocusTrigger.value = System.nanoTime()
+                        onLocationUpdated(defaultLocation)
                     }
                 }
             } catch (e: SecurityException) {
                 if (fallbackToDefault) {
                     updateUiWithLocation(defaultLocation)
                     _autoFocusTrigger.value = System.nanoTime()
+                    onLocationUpdated(defaultLocation)
                 }
+            }
+        }
+    }
+
+    private fun onLocationUpdated(latLng: LatLng) {
+        val shouldFetch = _showPublicLocations.value && hasLocationChangedSignificantly(currentLocation, latLng)
+        currentLocation = latLng
+
+        if (shouldFetch) {
+            fetchNearbyPlaces(latLng)
+        }
+    }
+
+    private fun hasLocationChangedSignificantly(oldLocation: LatLng?, newLocation: LatLng): Boolean {
+        if (oldLocation == null) return true
+
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(
+            oldLocation.latitude, oldLocation.longitude,
+            newLocation.latitude, newLocation.longitude,
+            results
+        )
+        return results[0] > 100.0f
+    }
+
+    private fun fetchNearbyPlaces(location: LatLng) {
+        placesFetchJob?.cancel()
+
+        placesFetchJob = viewModelScope.launch {
+            _isLoadingPlaces.value = true
+            try {
+                val result = placesRepository.searchNearbyPlaces(
+                    currentLocation = location,
+                    radiusMeters = 800
+                )
+                _nearbyPlaces.value = result.getOrDefault(emptyList())
+            } catch (e: Exception) {
+                _nearbyPlaces.value = emptyList()
+            } finally {
+                _isLoadingPlaces.value = false
             }
         }
     }

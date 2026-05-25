@@ -3,15 +3,21 @@ package com.example.walkhomesafe.presentation.screens
 import android.content.Context
 import android.location.LocationManager
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,13 +33,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.walkhomesafe.model.NearbyPlace
+import com.example.walkhomesafe.model.PlaceType
 import com.example.walkhomesafe.viewmodel.MapUiState
 import com.example.walkhomesafe.viewmodel.MapViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 import kotlinx.coroutines.delay
@@ -63,6 +74,9 @@ fun MapScreen(
         mapViewModel.updateSavedCameraPosition(cameraPositionState.position)
     }
 
+    val showPublicLocations by mapViewModel.showPublicLocations.collectAsState()
+    val nearbyPlaces by mapViewModel.nearbyPlaces.collectAsState()
+
     val locationManager = remember { context.getSystemService(Context.LOCATION_SERVICE) as LocationManager }
     var isGpsEnabled by remember { mutableStateOf(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) }
 
@@ -88,7 +102,13 @@ fun MapScreen(
             properties = MapProperties(
                 isMyLocationEnabled = permissionsViewModel.hasFineLocationPermission()
             ),
-        )
+        ) {
+            if (showPublicLocations) {
+                nearbyPlaces.forEach { place ->
+                    PlaceMarker(place = place)
+                }
+            }
+        }
 
         when (val state = uiState) {
             is MapUiState.Loading -> {
@@ -115,6 +135,17 @@ fun MapScreen(
                     style = MaterialTheme.typography.bodyLarge
                 )
             }
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 180.dp)
+        ) {
+            PublicLocationsFilterButton(
+                isEnabled = showPublicLocations,
+                onClick = { mapViewModel.togglePublicLocationsFilter() }
+            )
         }
 
         if (!isGpsEnabled) {
@@ -146,4 +177,67 @@ fun MapScreen(
             }
         }
     }
+}
+
+@Composable
+private fun PublicLocationsFilterButton(
+    isEnabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        shape = CircleShape,
+        containerColor = if (isEnabled) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerHighest
+        },
+        contentColor = if (isEnabled) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = 6.dp,
+            pressedElevation = 8.dp
+        )
+    ) {
+        Icon(
+            imageVector = if (isEnabled) Icons.Filled.Place else Icons.Outlined.Place,
+            contentDescription = if (isEnabled) "Filter: Offene Orte verstecken" else "Filter: Offene Orte anzeigen"
+        )
+    }
+}
+
+@Composable
+private fun PlaceMarker(
+    place: NearbyPlace
+) {
+    val markerState = remember(place.id) {
+        MarkerState(position = place.latLng)
+    }
+
+    Marker(
+        state = markerState,
+        title = place.name,
+        snippet = place.placeType.displayName,
+        icon = getMarkerIconForType(place.placeType)
+    )
+}
+
+private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
+    val hue = when (placeType) {
+        PlaceType.RESTAURANT -> BitmapDescriptorFactory.HUE_ORANGE
+        PlaceType.CAFE -> BitmapDescriptorFactory.HUE_YELLOW
+        PlaceType.SHOP -> BitmapDescriptorFactory.HUE_AZURE
+        PlaceType.LIBRARY -> BitmapDescriptorFactory.HUE_CYAN
+        PlaceType.SUPERMARKET -> BitmapDescriptorFactory.HUE_GREEN
+        PlaceType.PHARMACY -> BitmapDescriptorFactory.HUE_ROSE
+        PlaceType.POLICE_STATION -> BitmapDescriptorFactory.HUE_BLUE
+        PlaceType.HOSPITAL -> BitmapDescriptorFactory.HUE_RED
+        PlaceType.GAS_STATION -> BitmapDescriptorFactory.HUE_VIOLET
+    }
+    return BitmapDescriptorFactory.defaultMarker(hue)
 }
