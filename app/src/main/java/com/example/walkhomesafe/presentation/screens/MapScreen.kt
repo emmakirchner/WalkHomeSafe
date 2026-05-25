@@ -110,7 +110,10 @@ fun MapScreen(
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
-            uiSettings = MapUiSettings(myLocationButtonEnabled = permissionsViewModel.hasFineLocationPermission()),
+            uiSettings = MapUiSettings(
+                myLocationButtonEnabled = permissionsViewModel.hasFineLocationPermission(),
+                mapToolbarEnabled = false
+            ),
             properties = MapProperties(
                 isMyLocationEnabled = permissionsViewModel.hasFineLocationPermission(),
                 mapStyleOptions = mapStyleOptions

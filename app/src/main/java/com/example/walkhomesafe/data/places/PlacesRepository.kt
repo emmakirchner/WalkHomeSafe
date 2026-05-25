@@ -111,8 +111,12 @@ class PlacesRepository(context: Context) {
         val location = place.location ?: return null
         val placeTypes: List<String> = place.placeTypes ?: emptyList()
 
-        val matchedType = filterTypes.firstOrNull { filterType ->
-            placeTypes.any { it == filterType.apiType }
+        val matchedApiType = placeTypes.firstOrNull { apiType ->
+            filterTypes.any { filterType -> filterType.apiType == apiType }
+        }
+
+        val matchedType = matchedApiType?.let { apiType ->
+            filterTypes.first { it.apiType == apiType }
         } ?: filterTypes.firstOrNull() ?: return null
 
         val isOpen = isPlaceCurrentlyOpen(place)
