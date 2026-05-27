@@ -54,6 +54,7 @@ class EmergencyAlarmService : Service() {
             player.stop()
             player.release()
         }
+        AlarmState.setActive(false)
         super.onDestroy()
     }
 
