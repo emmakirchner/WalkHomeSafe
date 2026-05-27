@@ -58,6 +58,7 @@ fun HomeScreen(
 ) {
     val contacts by contactsViewModel.contacts.collectAsState()
     val message by messageViewModel.message.collectAsState()
+    val isAlarmActive by homeViewModel.isAlarmActive.collectAsState()
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -102,6 +103,7 @@ fun HomeScreen(
                 .padding(24.dp)
         ) {
             EmergencyActionButton(
+                isAlarmActive = isAlarmActive,
                 onShortPress = {
                     permissionsViewModel.requestSendSms {
                         permissionsViewModel.requestAccessFineLocation(
