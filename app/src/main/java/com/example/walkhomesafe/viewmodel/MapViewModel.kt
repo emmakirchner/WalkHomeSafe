@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 sealed interface MapUiState {
     data object Loading : MapUiState
@@ -45,7 +47,10 @@ class MapViewModel(
         hasFetchedOnce = true
         viewModelScope.launch {
             _uiState.value = MapUiState.Loading
-            tryFetchCurrentLocation(true)
+            if (!tryFetchCurrentLocation(true)) {
+                hasFetchedOnce = false
+                _uiState.value = MapUiState.Loading
+            }
         }
     }
 
@@ -60,8 +65,8 @@ class MapViewModel(
         }
     }
 
-    private fun tryFetchCurrentLocation(fallbackToDefault: Boolean) {
-        try {
+    private fun tryFetchCurrentLocation(fallbackToDefault: Boolean): Boolean {
+        return try {
             fusedLocationClient.getCurrentLocation(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 CancellationTokenSource().token
@@ -70,8 +75,12 @@ class MapViewModel(
             }.addOnFailureListener {
                 handleLocationResult(null, fallbackToDefault = fallbackToDefault)
             }
+            true
         } catch (e: SecurityException) {
-            updateUiWithLocation(defaultLocation)
+            if (fallbackToDefault) {
+                updateUiWithLocation(defaultLocation)
+            }
+            false
         }
     }
 
@@ -102,5 +111,38 @@ class MapViewModel(
     private fun updateUiWithLocation(latLng: LatLng) {
         _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
         _uiState.value = MapUiState.Location(latLng)
+    }
+
+    suspend fun requestLocationForSms(): LatLng? {
+        return suspendCancellableCoroutine { cont ->
+            try {
+                fusedLocationClient.getCurrentLocation(
+                    Priority.PRIORITY_HIGH_ACCURACY,
+                    CancellationTokenSource().token
+                ).addOnSuccessListener { location: Location? ->
+                    if (location != null) {
+                        cont.resume(LatLng(location.latitude, location.longitude))
+                    } else {
+                        fetchLastForSms(cont)
+                    }
+                }.addOnFailureListener {
+                    fetchLastForSms(cont)
+                }
+            } catch (e: SecurityException) {
+                cont.resume(null)
+            }
+        }
+    }
+
+    private fun fetchLastForSms(cont: kotlinx.coroutines.CancellableContinuation<LatLng?>) {
+        try {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                cont.resume(if (location != null) LatLng(location.latitude, location.longitude) else null)
+            }.addOnFailureListener {
+                cont.resume(null)
+            }
+        } catch (e: SecurityException) {
+            cont.resume(null)
+        }
     }
 }

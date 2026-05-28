@@ -1,7 +1,9 @@
 package com.example.walkhomesafe.presentation.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -14,6 +16,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,16 +25,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.example.walkhomesafe.viewmodel.LOCATION_PLACEHOLDER
+import com.example.walkhomesafe.viewmodel.MAX_MESSAGE_LENGTH
 
 @Composable
 fun EmergencyMessageTextField(
     value: String,
     onValueChange: (String) -> Unit
 ) {
-    var localMessage by rememberSaveable { mutableStateOf(value) }
+    var localMessage by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue(value)) }
+    val focusManager = LocalFocusManager.current
     var hasFocus by remember { mutableStateOf(false) }
-    val hasChanges = localMessage != value
+    val hasChanges = localMessage.text != value
+    LaunchedEffect(value) { localMessage = TextFieldValue(value) }
+
+    val placeholderCount = localMessage.text.split(LOCATION_PLACEHOLDER).size - 1
+    val effectiveLength = localMessage.text.length - placeholderCount * LOCATION_PLACEHOLDER.length
 
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -46,13 +59,33 @@ fun EmergencyMessageTextField(
             Text(
                 text = "Notfall‑Nachricht",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 16.dp)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = "$effectiveLength / $MAX_MESSAGE_LENGTH",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (effectiveLength >= MAX_MESSAGE_LENGTH)
+                        MaterialTheme.colorScheme.error
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             TextField(
                 value = localMessage,
-                onValueChange = { localMessage = it },
+                onValueChange = {
+                    val count = it.text.split(LOCATION_PLACEHOLDER).size - 1
+                    val effective = it.text.length - count * LOCATION_PLACEHOLDER.length
+                    if (effective <= MAX_MESSAGE_LENGTH) {
+                        localMessage = it
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .onFocusChanged { hasFocus = it.isFocused },
@@ -63,12 +96,36 @@ fun EmergencyMessageTextField(
                 )
             )
 
-            if (hasFocus && hasChanges) {
-                TextButton(
-                    onClick = { onValueChange(localMessage) },
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    Text("Speichern")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (hasFocus) {
+                    TextButton(onClick = {
+                        val cursorPos = localMessage.selection.start
+                        val text = localMessage.text
+                        val newText = text.substring(0, cursorPos) +
+                            LOCATION_PLACEHOLDER + text.substring(cursorPos)
+                        localMessage = localMessage.copy(
+                            text = newText,
+                            selection = TextRange(cursorPos + LOCATION_PLACEHOLDER.length)
+                        )
+                    }) {
+                        Text("Standort-Link")
+                    }
+                }
+
+                if (hasFocus && hasChanges) {
+                    TextButton(
+                        onClick = {
+                            onValueChange(localMessage.text)
+                            focusManager.clearFocus()
+                        }
+                    ) {
+                        Text("Speichern")
+                    }
                 }
             }
 

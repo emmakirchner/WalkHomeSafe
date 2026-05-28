@@ -26,6 +26,7 @@ class PermissionsViewModel(
     val permissionRequests = _permissionRequests.asSharedFlow()
 
     private var pendingAction: (() -> Unit)? = null
+    private var pendingDenied: (() -> Unit)? = null
 
     fun getPendingStartupPermissions(): List<PermissionIntent> {
         val pending = mutableListOf<PermissionIntent>()
@@ -43,10 +44,15 @@ class PermissionsViewModel(
     }
 
     fun onPermissionResult(granted: Boolean) {
-        if (granted) {
-            pendingAction?.invoke()
-        }
+        val action = pendingAction
+        val denied = pendingDenied
         pendingAction = null
+        pendingDenied = null
+        if (granted) {
+            action?.invoke()
+        } else {
+            denied?.invoke()
+        }
     }
 
     fun requestSendSms(onGranted: () -> Unit) {
@@ -96,11 +102,15 @@ class PermissionsViewModel(
         }
     }
 
-    fun requestAccessFineLocation(onGranted: () -> Unit) {
+    fun requestAccessFineLocation(
+        onDenied: (() -> Unit)? = null,
+        onGranted: () -> Unit
+    ) {
         if (hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
             onGranted()
         } else {
             pendingAction = onGranted
+            pendingDenied = onDenied
             viewModelScope.launch {
                 _permissionRequests.emit(PermissionIntent.AccessFineLocation)
             }
