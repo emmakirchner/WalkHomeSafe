@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -29,10 +30,12 @@ import androidx.compose.ui.unit.dp
 fun AuthScreen(
     onLogin: (String, String, (Boolean, String?) -> Unit) -> Unit,
     onRegister: (String, String, (Boolean, String?) -> Unit) -> Unit,
+    onResetPassword: (String, (Boolean, String?) -> Unit) -> Unit,
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isRegister by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
 
@@ -45,7 +48,8 @@ fun AuthScreen(
     ) {
         Text(
             text = "WalkHomeSafe",
-            style = MaterialTheme.typography.headlineLarge
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(Modifier.height(8.dp))
@@ -84,7 +88,18 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
+
+        if (!isRegister) {
+            TextButton(
+                onClick = { showResetDialog = true },
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Passwort vergessen?")
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
 
         feedback?.let {
             Text(
@@ -132,5 +147,53 @@ fun AuthScreen(
                 else "Noch kein Konto? Jetzt registrieren"
             )
         }
+    }
+
+    if (showResetDialog) {
+        var resetEmail by remember { mutableStateOf(email) }
+        var resetLoading by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Passwort zurücksetzen") },
+            text = {
+                Column {
+                    Text(
+                        "Gib deine E-Mail-Adresse ein. Wir senden dir einen Link zum Zurücksetzen deines Passworts.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = resetEmail,
+                        onValueChange = { resetEmail = it },
+                        label = { Text("E-Mail") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (resetEmail.isBlank()) return@Button
+                        resetLoading = true
+                        onResetPassword(resetEmail) { success, error ->
+                            resetLoading = false
+                            showResetDialog = false
+                            feedback = if (success) "Link zum Zurücksetzen gesendet" else (error ?: "Fehler")
+                        }
+                    },
+                    enabled = !resetLoading
+                ) {
+                    Text(if (resetLoading) "Wird gesendet..." else "Senden")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
     }
 }

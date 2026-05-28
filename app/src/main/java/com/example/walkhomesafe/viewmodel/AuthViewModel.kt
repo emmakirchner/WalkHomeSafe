@@ -34,6 +34,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
+    fun resetPassword(email: String, onResult: (Boolean, String?) -> Unit) {
+        auth.sendPasswordResetEmail(email)
+            .addOnCompleteListener { task ->
+                onResult(task.isSuccessful, task.exception?.message)
+            }
+    }
+
     fun logout() {
         auth.signOut()
     }

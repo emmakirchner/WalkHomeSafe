@@ -38,6 +38,9 @@ fun AppRoot() {
             },
             onRegister = { email, password, callback ->
                 authViewModel.register(email, password, callback)
+            },
+            onResetPassword = { email, callback ->
+                authViewModel.resetPassword(email, callback)
             }
         )
     } else {
