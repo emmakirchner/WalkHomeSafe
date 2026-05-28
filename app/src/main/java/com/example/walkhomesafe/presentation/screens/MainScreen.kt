@@ -15,7 +15,9 @@ import com.example.walkhomesafe.presentation.components.navigation.NavigationBar
 import com.example.walkhomesafe.presentation.components.navigation.TopBar
 
 @Composable
-fun MainScreen()
+fun MainScreen(
+    onLogout: () -> Unit = {}
+)
 {
     var selectedTab by remember { mutableStateOf(BottomTab.HOME) }
 
@@ -35,7 +37,7 @@ fun MainScreen()
                 BottomTab.HOME -> HomeScreen()
                 BottomTab.CONTACTS -> ContactsScreen()
                 BottomTab.MAP -> MapScreen()
-                BottomTab.SETTINGS -> SettingsScreen()
+                BottomTab.SETTINGS -> SettingsScreen(onLogout = onLogout)
             }
         }
     }

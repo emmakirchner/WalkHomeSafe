@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "725641723188",
-    "project_id": "walkhomesafe-firebase",
-    "storage_bucket": "walkhomesafe-firebase.firebasestorage.app"
+    "project_number": "764666220782",
+    "project_id": "walkhomesafe-b4060",
+    "storage_bucket": "walkhomesafe-b4060.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:725641723188:android:488cd9c9cf1c96d5a9f961",
+        "mobilesdk_app_id": "1:764666220782:android:767c7b5870597586fde3ff",
         "android_client_info": {
           "package_name": "com.example.walkhomesafe"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAwANYb_gxtLy1oXTcDzE9fy_h3AAo69VI"
+          "current_key": "AIzaSyBkBNmKzx4b4rnbkyPicnAMnR4JWCob5aM"
         }
       ],
       "services": {
