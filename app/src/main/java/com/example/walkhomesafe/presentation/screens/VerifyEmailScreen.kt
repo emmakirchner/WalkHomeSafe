@@ -1,0 +1,108 @@
+package com.example.walkhomesafe.presentation.screens
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+@Composable
+fun VerifyEmailScreen(
+    email: String,
+    onResend: ((Boolean, String?) -> Unit) -> Unit,
+    onRefresh: ((Boolean) -> Unit) -> Unit,
+    onLogout: () -> Unit,
+) {
+    var feedback by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "E-Mail bestätigen",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        Text(
+            text = "Wir haben eine Bestätigungs-E-Mail an $email gesendet. Bitte prüfe dein Postfach und klicke auf den Bestätigungslink.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        feedback?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = {
+                loading = true
+                feedback = null
+                onRefresh { verified ->
+                    loading = false
+                    if (verified) {
+                        feedback = null
+                    } else {
+                        feedback = "E-Mail noch nicht bestätigt. Bitte klicke auf den Link in der E-Mail."
+                    }
+                }
+            },
+            enabled = !loading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (loading) "Wird überprüft..." else "Ich habe bestätigt - Weiter")
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        TextButton(
+            onClick = {
+                loading = true
+                feedback = null
+                onResend { success, error ->
+                    loading = false
+                    feedback = if (success) "Bestätigungs-E-Mail erneut gesendet" else (error ?: "Fehler")
+                }
+            },
+            enabled = !loading,
+        ) {
+            Text("Bestätigungs-E-Mail erneut senden")
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        TextButton(onClick = onLogout) {
+            Text("Anderes Konto verwenden")
+        }
+    }
+}

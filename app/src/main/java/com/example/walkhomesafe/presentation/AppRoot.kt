@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.services.permissions.PermissionHost
 import com.example.walkhomesafe.presentation.screens.AuthScreen
 import com.example.walkhomesafe.presentation.screens.MainScreen
+import com.example.walkhomesafe.presentation.screens.VerifyEmailScreen
 import com.example.walkhomesafe.viewmodel.AuthViewModel
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 
@@ -17,7 +18,7 @@ fun AppRoot() {
     val authViewModel: AuthViewModel = viewModel()
     val permissionsViewModel: PermissionsViewModel = viewModel()
 
-    val user by authViewModel.user.collectAsState()
+    val authState by authViewModel.authState.collectAsState()
 
     val startupPermissions = remember {
         permissionsViewModel.getPendingStartupPermissions()
@@ -31,7 +32,7 @@ fun AppRoot() {
         }
     )
 
-    if (user == null) {
+    if (authState.firebaseUser == null) {
         AuthScreen(
             onLogin = { email, password, callback ->
                 authViewModel.login(email, password, callback)
@@ -42,6 +43,13 @@ fun AppRoot() {
             onResetPassword = { email, callback ->
                 authViewModel.resetPassword(email, callback)
             }
+        )
+    } else if (!authState.isEmailVerified) {
+        VerifyEmailScreen(
+            email = authState.firebaseUser!!.email ?: "",
+            onResend = { callback -> authViewModel.resendVerificationEmail(callback) },
+            onRefresh = { callback -> authViewModel.checkEmailVerified(callback) },
+            onLogout = { authViewModel.logout() }
         )
     } else {
         MainScreen(
