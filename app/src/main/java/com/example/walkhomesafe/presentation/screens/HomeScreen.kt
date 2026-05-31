@@ -35,10 +35,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.presentation.components.EmergencyActionButton
+import com.example.walkhomesafe.presentation.widget.WidgetSosAction
+import com.example.walkhomesafe.presentation.widget.WidgetTrigger
 import com.example.walkhomesafe.ui.theme.FeedbackBanner
 import com.example.walkhomesafe.viewmodel.ContactsViewModel
 import com.example.walkhomesafe.viewmodel.HomeViewModel
-import com.example.walkhomesafe.viewmodel.MapUiState
 import com.example.walkhomesafe.viewmodel.MapViewModel
 import com.example.walkhomesafe.viewmodel.MessageViewModel
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
@@ -70,6 +71,37 @@ fun HomeScreen(
     }
     var wasGpsOff by remember { mutableStateOf(!isGpsEnabled) }
 
+    fun sendSmsWithLocation() {
+        permissionsViewModel.requestAccessFineLocation(
+            onGranted = {
+                scope.launch {
+                    val latLng = if (isGpsEnabled) {
+                        mapViewModel.requestLocationForSms()
+                    } else {
+                        null
+                    }
+                    homeViewModel.onSendMessage(contacts, message, latLng)
+                    feedbackMessage = String.format(FEEDBACK_TEMPLATE, contacts.size)
+                }
+            },
+            onDenied = {
+                homeViewModel.onSendMessage(contacts, message, null)
+                feedbackMessage = String.format(FEEDBACK_TEMPLATE, contacts.size)
+            }
+        )
+    }
+
+    fun triggerSmsAction() {
+        permissionsViewModel.requestSendSms { sendSmsWithLocation() }
+    }
+
+    fun triggerAlarmAction() {
+        permissionsViewModel.requestSendSmsAndNotifications {
+            homeViewModel.startAlarmService()
+            sendSmsWithLocation()
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (permissionsViewModel.hasFineLocationPermission()) {
             mapViewModel.fetchLocation()
@@ -95,6 +127,15 @@ fun HomeScreen(
         }
     }
 
+    LaunchedEffect(Unit) {
+        WidgetTrigger.actions.collect { action ->
+            when (action) {
+                WidgetSosAction.SMS -> triggerSmsAction()
+                WidgetSosAction.ALARM -> triggerAlarmAction()
+            }
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(
             Modifier
@@ -102,49 +143,8 @@ fun HomeScreen(
                 .padding(24.dp)
         ) {
             EmergencyActionButton(
-                onShortPress = {
-                    permissionsViewModel.requestSendSms {
-                        permissionsViewModel.requestAccessFineLocation(
-                            onGranted = {
-                                scope.launch {
-                                    val latLng = if (isGpsEnabled) {
-                                        mapViewModel.requestLocationForSms()
-                                    } else {
-                                        null
-                                    }
-                                    homeViewModel.onSendMessage(contacts, message, latLng)
-                                    feedbackMessage = String.format(FEEDBACK_TEMPLATE, contacts.size)
-                                }
-                            },
-                            onDenied = {
-                                homeViewModel.onSendMessage(contacts, message, null)
-                                feedbackMessage = String.format(FEEDBACK_TEMPLATE, contacts.size)
-                            }
-                        )
-                    }
-                },
-                onLongPressRelease = {
-                    permissionsViewModel.requestSendSmsAndNotifications {
-                        homeViewModel.startAlarmService()
-                        permissionsViewModel.requestAccessFineLocation(
-                            onGranted = {
-                                scope.launch {
-                                    val latLng = if (isGpsEnabled) {
-                                        mapViewModel.requestLocationForSms()
-                                    } else {
-                                        null
-                                    }
-                                    homeViewModel.onSendMessage(contacts, message, latLng)
-                                    feedbackMessage = String.format(FEEDBACK_TEMPLATE, contacts.size)
-                                }
-                            },
-                            onDenied = {
-                                homeViewModel.onSendMessage(contacts, message, null)
-                                feedbackMessage = String.format(FEEDBACK_TEMPLATE, contacts.size)
-                            }
-                        )
-                    }
-                },
+                onShortPress = { triggerSmsAction() },
+                onLongPressRelease = { triggerAlarmAction() },
                 onCancel = homeViewModel::stopAlarmService
             )
         }

@@ -1,3 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WalkHomeSafe</string>
+    <string name="emergency_action_widget_label">SOS-Notfall</string>
+    <string name="emergency_action_widget_description">SOS-Notfallknopf – SMS senden oder Alarm auslösen</string>
+    <string name="emergency_action_widget_sms_title">SMS</string>
+    <string name="emergency_action_widget_sms_subtitle">SMS senden</string>
+    <string name="emergency_action_widget_alarm_title">ALARM</string>
+    <string name="emergency_action_widget_alarm_subtitle">Alarm + SMS</string>
 </resources>
