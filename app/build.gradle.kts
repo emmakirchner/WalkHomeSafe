@@ -57,6 +57,16 @@ dependencies {
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
+    implementation(libs.places)
+    constraints {
+        implementation("androidx.vectordrawable:vectordrawable:1.2.0") {
+            because("Places SDK transitively depends on 1.0.0 which has a namespace conflict")
+        }
+        implementation("androidx.vectordrawable:vectordrawable-animated:1.2.0") {
+            because("Places SDK transitively depends on 1.0.0 which has a namespace conflict")
+        }
+    }
+
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

@@ -12,7 +12,7 @@ object ReportService {
     private const val BASE_URL = "https://walkhomesafe-frfgcrdtfkaqg3cd.germanywestcentral-01.azurewebsites.net"
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun create(request: SaveReportDto): ReportDto? = withContext(Dispatchers.IO) {
+    suspend fun create(request: SaveReportDto): Int? = withContext(Dispatchers.IO) {
         val connection = URL("$BASE_URL/api/reports").openConnection() as HttpURLConnection
         connection.requestMethod = "PUT"
         connection.doOutput = true
@@ -22,8 +22,7 @@ object ReportService {
         try {
             val body = json.encodeToString(request)
             OutputStreamWriter(connection.outputStream).use { it.write(body) }
-            val response = connection.inputStream.bufferedReader().readText()
-            json.decodeFromString<ReportDto>(response)
+            connection.responseCode
         } catch (e: Exception) {
             null
         } finally {
