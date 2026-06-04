@@ -32,7 +32,7 @@ class EmergencyActionWidgetProvider : AppWidgetProvider() {
         ) {
             val smsIntent = Intent(context, MainActivity::class.java).apply {
                 putExtra(EXTRA_SOS_ACTION, ACTION_SMS)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
             val smsPendingIntent = PendingIntent.getActivity(
                 context,
@@ -43,7 +43,7 @@ class EmergencyActionWidgetProvider : AppWidgetProvider() {
 
             val alarmIntent = Intent(context, MainActivity::class.java).apply {
                 putExtra(EXTRA_SOS_ACTION, ACTION_ALARM)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
             val alarmPendingIntent = PendingIntent.getActivity(
                 context,

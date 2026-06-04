@@ -128,10 +128,12 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        WidgetTrigger.actions.collect { action ->
-            when (action) {
-                WidgetSosAction.SMS -> triggerSmsAction()
-                WidgetSosAction.ALARM -> triggerAlarmAction()
+        WidgetTrigger.action.collect { action ->
+            if (action != null && WidgetTrigger.consume() != null) {
+                when (action) {
+                    WidgetSosAction.SMS -> triggerSmsAction()
+                    WidgetSosAction.ALARM -> triggerAlarmAction()
+                }
             }
         }
     }

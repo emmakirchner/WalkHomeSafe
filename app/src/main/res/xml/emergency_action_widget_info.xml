@@ -7,7 +7,7 @@
     android:initialLayout="@layout/emergency_action_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetFeatures="reconfigurable"
-    android:description="@string/emergency_action_widget_description"
     android:updatePeriodMillis="0"
-    android:previewImage="@mipmap/ic_launcher"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
     android:label="@string/emergency_action_widget_label" />
