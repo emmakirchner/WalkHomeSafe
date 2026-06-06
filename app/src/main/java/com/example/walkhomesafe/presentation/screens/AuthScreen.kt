@@ -29,11 +29,12 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AuthScreen(
     onLogin: (String, String, (Boolean, String?) -> Unit) -> Unit,
-    onRegister: (String, String, (Boolean, String?) -> Unit) -> Unit,
+    onRegister: (String, String, String, (Boolean, String?) -> Unit) -> Unit,
     onResetPassword: (String, (Boolean, String?) -> Unit) -> Unit,
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     var isRegister by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf<String?>(null) }
@@ -88,6 +89,22 @@ fun AuthScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        if (isRegister) {
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Benutzername") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+        }
+
         Spacer(Modifier.height(8.dp))
 
         if (!isRegister) {
@@ -120,13 +137,25 @@ fun AuthScreen(
                     feedback = "Passwort muss mindestens 6 Zeichen lang sein"
                     return@Button
                 }
+                if (isRegister && username.isBlank()) {
+                    feedback = "Bitte einen Benutzernamen eingeben"
+                    return@Button
+                }
                 loading = true
                 feedback = null
-                val action = if (isRegister) onRegister else onLogin
-                action(email, password) { success, error ->
-                    loading = false
-                    if (!success) {
-                        feedback = error ?: "Ein Fehler ist aufgetreten"
+                if (isRegister) {
+                    onRegister(email, password, username) { success, error ->
+                        loading = false
+                        if (!success) {
+                            feedback = error ?: "Ein Fehler ist aufgetreten"
+                        }
+                    }
+                } else {
+                    onLogin(email, password) { success, error ->
+                        loading = false
+                        if (!success) {
+                            feedback = error ?: "Ein Fehler ist aufgetreten"
+                        }
                     }
                 }
             },
@@ -140,6 +169,7 @@ fun AuthScreen(
 
         TextButton(onClick = {
             isRegister = !isRegister
+            username = ""
             feedback = null
         }) {
             Text(

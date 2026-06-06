@@ -37,8 +37,8 @@ fun AppRoot() {
             onLogin = { email, password, callback ->
                 authViewModel.login(email, password, callback)
             },
-            onRegister = { email, password, callback ->
-                authViewModel.register(email, password, callback)
+            onRegister = { email, password, username, callback ->
+                authViewModel.register(email, password, username, callback)
             },
             onResetPassword = { email, callback ->
                 authViewModel.resetPassword(email, callback)
@@ -53,7 +53,12 @@ fun AppRoot() {
         )
     } else {
         MainScreen(
-            onLogout = { authViewModel.logout() }
+            username = authState.username,
+            onLogout = { authViewModel.logout() },
+            onDeleteAccount = { callback -> authViewModel.deleteAccount(callback) },
+            onReauthAndDelete = { email, password, callback ->
+                authViewModel.reauthenticateAndDelete(email, password, callback)
+            }
         )
     }
 }

@@ -16,7 +16,10 @@ import com.example.walkhomesafe.presentation.components.navigation.TopBar
 
 @Composable
 fun MainScreen(
-    onLogout: () -> Unit = {}
+    username: String? = null,
+    onLogout: () -> Unit = {},
+    onDeleteAccount: ((Boolean, String?) -> Unit) -> Unit = {},
+    onReauthAndDelete: (String, String, (Boolean, String?) -> Unit) -> Unit = { _, _, _ -> },
 )
 {
     var selectedTab by remember { mutableStateOf(BottomTab.HOME) }
@@ -37,7 +40,12 @@ fun MainScreen(
                 BottomTab.HOME -> HomeScreen()
                 BottomTab.CONTACTS -> ContactsScreen()
                 BottomTab.MAP -> MapScreen()
-                BottomTab.SETTINGS -> SettingsScreen(onLogout = onLogout)
+                BottomTab.SETTINGS -> SettingsScreen(
+                    username = username,
+                    onLogout = onLogout,
+                    onDeleteAccount = onDeleteAccount,
+                    onReauthAndDelete = onReauthAndDelete
+                )
             }
         }
     }
