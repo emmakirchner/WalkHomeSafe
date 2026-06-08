@@ -1,14 +1,22 @@
 package com.example.walkhomesafe.presentation.screens
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.location.LocationManager
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.Place
@@ -16,8 +24,6 @@ import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -78,6 +84,7 @@ fun MapScreen(
     }
 
     val showPublicLocations by mapViewModel.showPublicLocations.collectAsState()
+    val showClosedPlaces by mapViewModel.showClosedPlaces.collectAsState()
     val nearbyPlaces by mapViewModel.nearbyPlaces.collectAsState()
 
     val mapStyleOptions = remember(context) {
@@ -160,7 +167,9 @@ fun MapScreen(
         ) {
             PublicLocationsFilterButton(
                 isEnabled = showPublicLocations,
-                onClick = { mapViewModel.togglePublicLocationsFilter() }
+                isDebugMode = showClosedPlaces,
+                onClick = { mapViewModel.togglePublicLocationsFilter() },
+                onLongClick = { mapViewModel.toggleClosedPlacesFilter() }
             )
         }
 
@@ -195,34 +204,44 @@ fun MapScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PublicLocationsFilterButton(
     isEnabled: Boolean,
+    isDebugMode: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    FloatingActionButton(
-        onClick = onClick,
-        modifier = modifier,
-        shape = CircleShape,
-        containerColor = if (isEnabled) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        },
-        contentColor = if (isEnabled) {
-            MaterialTheme.colorScheme.onPrimary
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
-        },
-        elevation = FloatingActionButtonDefaults.elevation(
-            defaultElevation = 6.dp,
-            pressedElevation = 8.dp
-        )
+    Box(
+        modifier = modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
+            .background(
+                when {
+                    isDebugMode -> MaterialTheme.colorScheme.tertiary
+                    isEnabled -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.surfaceContainerHighest
+                }
+            ),
+        contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = if (isEnabled) Icons.Filled.Place else Icons.Outlined.Place,
-            contentDescription = if (isEnabled) "Filter: Offene Orte verstecken" else "Filter: Offene Orte anzeigen"
+            imageVector = if (isEnabled || isDebugMode) Icons.Filled.Place else Icons.Outlined.Place,
+            contentDescription = when {
+                isDebugMode -> "Debug: Geschlossene Orte ausblenden"
+                isEnabled -> "Filter: Offene Orte verstecken"
+                else -> "Filter: Offene Orte anzeigen"
+            },
+            tint = when {
+                isDebugMode -> MaterialTheme.colorScheme.onTertiary
+                isEnabled -> MaterialTheme.colorScheme.onPrimary
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
         )
     }
 }
@@ -236,6 +255,7 @@ private fun PlaceMarker(
     }
 
     val statusText = when {
+        place.isOpenNow == false -> "Geschlossen"
         place.closingTime == "24/7" -> "Geöffnet 24/7"
         place.closingTime != null -> "Geöffnet bis ${place.closingTime} Uhr"
         else -> "Geöffnet"
@@ -247,8 +267,24 @@ private fun PlaceMarker(
         state = markerState,
         title = place.name,
         snippet = snippetText,
-        icon = getMarkerIconForType(place.placeType)
+        icon = if (place.isOpenNow == false) {
+            greyMarker
+        } else {
+            getMarkerIconForType(place.placeType)
+        }
     )
+}
+
+private val greyMarker: BitmapDescriptor by lazy {
+    val size = 40
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint().apply {
+        color = android.graphics.Color.GRAY
+        alpha = 200
+    }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+    BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
 private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {

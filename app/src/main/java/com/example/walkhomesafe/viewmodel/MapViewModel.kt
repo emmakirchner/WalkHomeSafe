@@ -45,6 +45,9 @@ class MapViewModel(
     private val _showPublicLocations = MutableStateFlow(true)
     val showPublicLocations: StateFlow<Boolean> = _showPublicLocations.asStateFlow()
 
+    private val _showClosedPlaces = MutableStateFlow(false)
+    val showClosedPlaces: StateFlow<Boolean> = _showClosedPlaces.asStateFlow()
+
     private val _nearbyPlaces = MutableStateFlow<List<NearbyPlace>>(emptyList())
     val nearbyPlaces: StateFlow<List<NearbyPlace>> = _nearbyPlaces.asStateFlow()
 
@@ -89,6 +92,12 @@ class MapViewModel(
         if (newValue && _nearbyPlaces.value.isEmpty()) {
             currentLocation?.let { fetchNearbyPlaces(it) }
         }
+    }
+
+    fun toggleClosedPlacesFilter() {
+        val newValue = !_showClosedPlaces.value
+        _showClosedPlaces.value = newValue
+        currentLocation?.let { fetchNearbyPlaces(it, includeClosed = newValue) }
     }
 
     private fun tryFetchCurrentLocation(fallbackToDefault: Boolean): Boolean {
@@ -161,7 +170,7 @@ class MapViewModel(
         return results[0] > 100.0f
     }
 
-    private fun fetchNearbyPlaces(location: LatLng) {
+    private fun fetchNearbyPlaces(location: LatLng, includeClosed: Boolean = false) {
         placesFetchJob?.cancel()
 
         placesFetchJob = viewModelScope.launch {
@@ -169,7 +178,8 @@ class MapViewModel(
             try {
                 val result = placesRepository.searchNearbyPlaces(
                     currentLocation = location,
-                    radiusMeters = 800
+                    radiusMeters = 800,
+                    includeClosed = includeClosed
                 )
                 _nearbyPlaces.value = result.getOrDefault(emptyList())
             } catch (e: Exception) {

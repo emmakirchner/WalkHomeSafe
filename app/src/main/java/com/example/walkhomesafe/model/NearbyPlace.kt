@@ -14,17 +14,22 @@ enum class PlaceType(val apiType: String, val displayName: String) {
     GAS_STATION("gas_station", "Tankstelle");
 
     companion object {
-        val DEFAULT_FILTER_TYPES = listOf(
-            RESTAURANT,
-            CAFE,
-            SHOP,
-            LIBRARY,
+        val FILTER_GROUP_A = listOf(
             SUPERMARKET,
+            SHOP,
+            GAS_STATION,
+            CAFE
+        )
+
+        val FILTER_GROUP_B = listOf(
+            RESTAURANT,
+            LIBRARY,
             PHARMACY,
             POLICE_STATION,
-            HOSPITAL,
-            GAS_STATION
+            HOSPITAL
         )
+
+        val DEFAULT_FILTER_TYPES = FILTER_GROUP_A + FILTER_GROUP_B
     }
 }
 

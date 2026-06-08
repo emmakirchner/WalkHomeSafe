@@ -11,9 +11,12 @@ import com.google.android.libraries.places.api.model.OpeningHours
 import com.google.android.libraries.places.api.model.Period
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.model.CircularBounds
+import com.google.android.libraries.places.api.net.SearchNearbyRequest.RankPreference
 import com.google.android.libraries.places.api.net.SearchNearbyRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -50,13 +53,15 @@ class PlacesRepository(context: Context) {
     suspend fun searchNearbyPlaces(
         currentLocation: LatLng,
         radiusMeters: Int = 800,
-        placeTypes: List<PlaceType> = PlaceType.DEFAULT_FILTER_TYPES
+        placeTypes: List<PlaceType> = PlaceType.DEFAULT_FILTER_TYPES,
+        includeClosed: Boolean = false
     ): Result<List<NearbyPlace>> = withContext<Result<List<NearbyPlace>>>(Dispatchers.IO) {
         try {
             val placeFields = listOf(
                 Place.Field.ID,
                 Place.Field.DISPLAY_NAME,
                 Place.Field.LOCATION,
+                Place.Field.PRIMARY_TYPE,
                 Place.Field.TYPES,
                 Place.Field.OPENING_HOURS,
                 Place.Field.CURRENT_OPENING_HOURS,
@@ -66,31 +71,66 @@ class PlacesRepository(context: Context) {
             )
 
             val bounds = CircularBounds.newInstance(currentLocation, radiusMeters.toDouble())
-            val includedTypes = placeTypes.map { it.apiType }
 
-            val searchRequest = SearchNearbyRequest.builder(bounds, placeFields)
-                .setIncludedTypes(includedTypes)
-                .setMaxResultCount(20)
-                .build()
+            val groupA = placeTypes.filter { it in PlaceType.FILTER_GROUP_A }
+            val groupB = placeTypes.filter { it in PlaceType.FILTER_GROUP_B }
 
-            val response = placesClient.searchNearby(searchRequest).await()
-            val places = response.places.mapNotNull { place ->
-                placeToNearbyPlace(place, placeTypes)
+            fun buildRequest(apiTypes: List<String>) =
+                SearchNearbyRequest.builder(bounds, placeFields)
+                    .setIncludedTypes(apiTypes)
+                    .setMaxResultCount(20)
+                    .setRankPreference(RankPreference.DISTANCE)
+                    .build()
+
+            val allPlaces = mutableListOf<NearbyPlace>()
+
+            coroutineScope {
+                val deferredA = if (groupA.isNotEmpty()) {
+                    async { placesClient.searchNearby(buildRequest(groupA.map { it.apiType })).await() }
+                } else null
+
+                val deferredB = if (groupB.isNotEmpty()) {
+                    async { placesClient.searchNearby(buildRequest(groupB.map { it.apiType })).await() }
+                } else null
+
+                deferredA?.let {
+                    try {
+                        val responseA = it.await()
+                        responseA.places.mapNotNullTo(allPlaces) { place ->
+                            placeToNearbyPlace(place, groupA, includeClosed)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PlacesRepository", "Group A search failed", e)
+                    }
+                }
+
+                deferredB?.let {
+                    try {
+                        val responseB = it.await()
+                        responseB.places.mapNotNullTo(allPlaces) { place ->
+                            placeToNearbyPlace(place, groupB, includeClosed)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PlacesRepository", "Group B search failed", e)
+                    }
+                }
             }
 
-            if (places.isEmpty() && useMockFallback) {
+            val deduplicated = allPlaces.distinctBy { it.id }
+
+            if (deduplicated.isEmpty() && useMockFallback) {
                 val filteredMockPlaces = getMockPlaces(currentLocation)
-                    .filter { it.isOpenNow != false }
+                    .filter { includeClosed || it.isOpenNow != false }
                 Result.success(filteredMockPlaces)
             } else {
-                Result.success(places)
+                Result.success(deduplicated)
             }
 
         } catch (e: ApiException) {
             Log.e("PlacesRepository", "Places API error: ${e.statusCode}", e)
             if (useMockFallback) {
                 val filteredMockPlaces = getMockPlaces(currentLocation)
-                    .filter { it.isOpenNow != false }
+                    .filter { includeClosed || it.isOpenNow != false }
                 Result.success(filteredMockPlaces)
             } else {
                 Result.failure<List<NearbyPlace>>(e)
@@ -99,7 +139,7 @@ class PlacesRepository(context: Context) {
             Log.e("PlacesRepository", "Error fetching nearby places", e)
             if (useMockFallback) {
                 val filteredMockPlaces = getMockPlaces(currentLocation)
-                    .filter { it.isOpenNow != false }
+                    .filter { includeClosed || it.isOpenNow != false }
                 Result.success(filteredMockPlaces)
             } else {
                 Result.failure<List<NearbyPlace>>(e)
@@ -107,12 +147,12 @@ class PlacesRepository(context: Context) {
         }
     }
 
-    private fun placeToNearbyPlace(place: Place, filterTypes: List<PlaceType>): NearbyPlace? {
+    private fun placeToNearbyPlace(place: Place, filterTypes: List<PlaceType>, includeClosed: Boolean = false): NearbyPlace? {
         val location = place.location ?: return null
-        val placeTypes: List<String> = place.placeTypes ?: emptyList()
+        val placeTypeList: List<String> = place.placeTypes ?: emptyList()
 
-        val matchedApiType = placeTypes.firstOrNull { apiType ->
-            filterTypes.any { filterType -> filterType.apiType == apiType }
+        val matchedApiType = placeTypeList.firstOrNull { apiType ->
+            filterTypes.any { it.apiType == apiType }
         }
 
         val matchedType = matchedApiType?.let { apiType ->
@@ -121,7 +161,7 @@ class PlacesRepository(context: Context) {
 
         val isOpen = isPlaceCurrentlyOpen(place)
 
-        if (isOpen == false) {
+        if (!includeClosed && isOpen == false) {
             return null
         }
 
