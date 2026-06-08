@@ -212,8 +212,8 @@ fun MapScreen(
 
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                        .fillMaxWidth(0.85f)
+                        .padding(8.dp),
                     shape = RoundedCornerShape(12.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -223,8 +223,7 @@ fun MapScreen(
                             value = searchQuery,
                             onValueChange = { mapViewModel.searchLocation(it) },
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
+                                .fillMaxWidth(),
                             placeholder = { Text("Ort oder Adresse suchen...") },
                             leadingIcon = {
                                 Icon(
