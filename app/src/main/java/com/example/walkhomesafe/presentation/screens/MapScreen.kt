@@ -6,8 +6,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.location.LocationManager
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.Place
@@ -26,6 +24,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -163,7 +162,7 @@ fun MapScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 180.dp)
+                .padding(end = 10.dp, bottom = 100.dp)
         ) {
             PublicLocationsFilterButton(
                 isEnabled = showPublicLocations,
@@ -213,22 +212,17 @@ private fun PublicLocationsFilterButton(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Surface(
         modifier = modifier
-            .size(56.dp)
-            .clip(CircleShape)
+            .size(40.dp)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
-            )
-            .background(
-                when {
-                    isDebugMode -> MaterialTheme.colorScheme.tertiary
-                    isEnabled -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.surfaceContainerHighest
-                }
             ),
-        contentAlignment = Alignment.Center
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shadowElevation = 6.dp
     ) {
         Icon(
             imageVector = if (isEnabled || isDebugMode) Icons.Filled.Place else Icons.Outlined.Place,
@@ -236,11 +230,6 @@ private fun PublicLocationsFilterButton(
                 isDebugMode -> "Debug: Geschlossene Orte ausblenden"
                 isEnabled -> "Filter: Offene Orte verstecken"
                 else -> "Filter: Offene Orte anzeigen"
-            },
-            tint = when {
-                isDebugMode -> MaterialTheme.colorScheme.onTertiary
-                isEnabled -> MaterialTheme.colorScheme.onPrimary
-                else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
         )
     }
@@ -258,7 +247,8 @@ private fun PlaceMarker(
         place.isOpenNow == false -> "Geschlossen"
         place.closingTime == "24/7" -> "Geöffnet 24/7"
         place.closingTime != null -> "Geöffnet bis ${place.closingTime} Uhr"
-        else -> "Geöffnet"
+        place.isOpenNow == true -> "Geöffnet"
+        else -> "Unbekannt"
     }
 
     val snippetText = "${place.placeType.displayName} | $statusText"
@@ -267,10 +257,10 @@ private fun PlaceMarker(
         state = markerState,
         title = place.name,
         snippet = snippetText,
-        icon = if (place.isOpenNow == false) {
-            greyMarker
-        } else {
-            getMarkerIconForType(place.placeType)
+        icon = when {
+            place.isOpenNow == false -> greyMarker
+            place.isOpenNow == null && place.closingTime == null -> unknownMarker
+            else -> getMarkerIconForType(place.placeType)
         }
     )
 }
@@ -287,17 +277,43 @@ private val greyMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
-private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
-    val hue = when (placeType) {
-        PlaceType.RESTAURANT -> BitmapDescriptorFactory.HUE_ORANGE
-        PlaceType.CAFE -> BitmapDescriptorFactory.HUE_YELLOW
-        PlaceType.SHOP -> BitmapDescriptorFactory.HUE_AZURE
-        PlaceType.LIBRARY -> BitmapDescriptorFactory.HUE_CYAN
-        PlaceType.SUPERMARKET -> BitmapDescriptorFactory.HUE_GREEN
-        PlaceType.PHARMACY -> BitmapDescriptorFactory.HUE_ROSE
-        PlaceType.POLICE_STATION -> BitmapDescriptorFactory.HUE_BLUE
-        PlaceType.HOSPITAL -> BitmapDescriptorFactory.HUE_RED
-        PlaceType.GAS_STATION -> BitmapDescriptorFactory.HUE_VIOLET
+private val unknownMarker: BitmapDescriptor by lazy {
+    val size = 40
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint().apply {
+        color = android.graphics.Color.LTGRAY
+        alpha = 200
     }
-    return BitmapDescriptorFactory.defaultMarker(hue)
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+    BitmapDescriptorFactory.fromBitmap(bitmap)
 }
+
+private val markerCache = mutableMapOf<PlaceType, BitmapDescriptor>()
+
+private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
+    return markerCache.getOrPut(placeType) {
+        val size = 40
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint().apply {
+            color = placeType.darkerColor
+            alpha = 255
+        }
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        BitmapDescriptorFactory.fromBitmap(bitmap)
+    }
+}
+
+private val PlaceType.darkerColor: Int
+    get() = when (this) {
+        PlaceType.RESTAURANT -> android.graphics.Color.rgb(200, 80, 0)
+        PlaceType.CAFE -> android.graphics.Color.rgb(200, 140, 0)
+        PlaceType.SHOP -> android.graphics.Color.rgb(0, 100, 200)
+        PlaceType.LIBRARY -> android.graphics.Color.rgb(0, 130, 130)
+        PlaceType.SUPERMARKET -> android.graphics.Color.rgb(0, 130, 0)
+        PlaceType.PHARMACY -> android.graphics.Color.rgb(190, 0, 120)
+        PlaceType.POLICE_STATION -> android.graphics.Color.rgb(0, 45, 180)
+        PlaceType.HOSPITAL -> android.graphics.Color.rgb(180, 0, 0)
+        PlaceType.GAS_STATION -> android.graphics.Color.rgb(100, 0, 180)
+    }

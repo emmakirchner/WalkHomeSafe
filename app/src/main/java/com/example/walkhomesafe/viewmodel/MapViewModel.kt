@@ -4,7 +4,7 @@ import android.app.Application
 import android.location.Location
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.walkhomesafe.data.places.PlacesRepository
+import com.example.walkhomesafe.services.PlacesRepository
 import com.example.walkhomesafe.model.NearbyPlace
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices

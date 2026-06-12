@@ -1,4 +1,4 @@
-package com.example.walkhomesafe.data.places
+package com.example.walkhomesafe.services
 
 import android.content.Context
 import android.util.Log
@@ -25,7 +25,6 @@ import java.time.ZoneOffset
 class PlacesRepository(context: Context) {
 
     private val placesClient: PlacesClient
-    private val useMockFallback: Boolean = true
 
     init {
         if (!Places.isInitialized()) {
@@ -117,33 +116,14 @@ class PlacesRepository(context: Context) {
             }
 
             val deduplicated = allPlaces.distinctBy { it.id }
-
-            if (deduplicated.isEmpty() && useMockFallback) {
-                val filteredMockPlaces = getMockPlaces(currentLocation)
-                    .filter { includeClosed || it.isOpenNow != false }
-                Result.success(filteredMockPlaces)
-            } else {
-                Result.success(deduplicated)
-            }
+            Result.success(deduplicated)
 
         } catch (e: ApiException) {
             Log.e("PlacesRepository", "Places API error: ${e.statusCode}", e)
-            if (useMockFallback) {
-                val filteredMockPlaces = getMockPlaces(currentLocation)
-                    .filter { includeClosed || it.isOpenNow != false }
-                Result.success(filteredMockPlaces)
-            } else {
-                Result.failure<List<NearbyPlace>>(e)
-            }
+            Result.failure(e)
         } catch (e: Exception) {
             Log.e("PlacesRepository", "Error fetching nearby places", e)
-            if (useMockFallback) {
-                val filteredMockPlaces = getMockPlaces(currentLocation)
-                    .filter { includeClosed || it.isOpenNow != false }
-                Result.success(filteredMockPlaces)
-            } else {
-                Result.failure<List<NearbyPlace>>(e)
-            }
+            Result.failure(e)
         }
     }
 
@@ -380,99 +360,5 @@ class PlacesRepository(context: Context) {
         }
 
         return false
-    }
-
-    private fun getMockPlaces(currentLocation: LatLng): List<NearbyPlace> {
-        val baseLat = currentLocation.latitude
-        val baseLng = currentLocation.longitude
-
-        return listOf(
-            NearbyPlace(
-                id = "mock_1",
-                name = "Cafe am Markt",
-                latLng = LatLng(baseLat + 0.001, baseLng + 0.001),
-                placeType = PlaceType.CAFE,
-                isOpenNow = true,
-                closingTime = "22:00"
-            ),
-            NearbyPlace(
-                id = "mock_2",
-                name = "Stadtbibliothek",
-                latLng = LatLng(baseLat - 0.0015, baseLng + 0.002),
-                placeType = PlaceType.LIBRARY,
-                isOpenNow = true,
-                closingTime = "18:00"
-            ),
-            NearbyPlace(
-                id = "mock_3",
-                name = "REWE Supermarkt",
-                latLng = LatLng(baseLat + 0.002, baseLng - 0.001),
-                placeType = PlaceType.SUPERMARKET,
-                isOpenNow = true,
-                closingTime = "20:00"
-            ),
-            NearbyPlace(
-                id = "mock_4",
-                name = "Pizzeria Roma",
-                latLng = LatLng(baseLat - 0.0005, baseLng - 0.002),
-                placeType = PlaceType.RESTAURANT,
-                isOpenNow = true,
-                closingTime = "23:00"
-            ),
-            NearbyPlace(
-                id = "mock_5",
-                name = "Apotheke am Bahnhof",
-                latLng = LatLng(baseLat + 0.0008, baseLng - 0.0015),
-                placeType = PlaceType.PHARMACY,
-                isOpenNow = true,
-                closingTime = "19:00"
-            ),
-            NearbyPlace(
-                id = "mock_6",
-                name = "Modehaus",
-                latLng = LatLng(baseLat - 0.001, baseLng + 0.0005),
-                placeType = PlaceType.SHOP,
-                isOpenNow = true,
-                closingTime = "19:00"
-            ),
-            NearbyPlace(
-                id = "mock_7",
-                name = "Polizeiwache",
-                latLng = LatLng(baseLat + 0.0025, baseLng + 0.0025),
-                placeType = PlaceType.POLICE_STATION,
-                isOpenNow = true,
-                closingTime = "24/7"
-            ),
-            NearbyPlace(
-                id = "mock_8",
-                name = "Krankenhaus Mitte",
-                latLng = LatLng(baseLat - 0.003, baseLng),
-                placeType = PlaceType.HOSPITAL,
-                isOpenNow = true,
-                closingTime = "24/7"
-            ),
-            NearbyPlace(
-                id = "mock_9",
-                name = "Shell Tankstelle",
-                latLng = LatLng(baseLat, baseLng + 0.003),
-                placeType = PlaceType.GAS_STATION,
-                isOpenNow = true,
-                closingTime = "24/7"
-            ),
-            NearbyPlace(
-                id = "mock_closed_1",
-                name = "Nachtclub Exclusiv",
-                latLng = LatLng(baseLat + 0.0015, baseLng - 0.0008),
-                placeType = PlaceType.RESTAURANT,
-                isOpenNow = false
-            ),
-            NearbyPlace(
-                id = "mock_closed_2",
-                name = "Feinkostladen am Dom",
-                latLng = LatLng(baseLat - 0.002, baseLng + 0.001),
-                placeType = PlaceType.SHOP,
-                isOpenNow = false
-            )
-        )
     }
 }
