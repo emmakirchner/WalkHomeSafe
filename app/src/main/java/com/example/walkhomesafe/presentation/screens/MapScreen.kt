@@ -126,7 +126,12 @@ fun MapScreen(
             ),
         ) {
             if (showPublicLocations) {
-                nearbyPlaces.forEach { place ->
+                val filteredPlaces = if (showClosedPlaces) {
+                    nearbyPlaces
+                } else {
+                    nearbyPlaces.filter { it.isOpenNow == true || it.closingTime != null }
+                }
+                filteredPlaces.forEach { place ->
                     PlaceMarker(place = place)
                 }
             }
