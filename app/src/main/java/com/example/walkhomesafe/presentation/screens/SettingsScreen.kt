@@ -18,6 +18,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,14 +29,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.walkhomesafe.viewmodel.AuthViewModel
 
 @Composable
 fun SettingsScreen(
-    username: String? = null,
-    onLogout: () -> Unit = {},
-    onDeleteAccount: ((Boolean, String?) -> Unit) -> Unit = {},
-    onReauthAndDelete: (String, String, (Boolean, String?) -> Unit) -> Unit = { _, _, _ -> },
+    authViewModel: AuthViewModel = viewModel(),
 ) {
+    val authState by authViewModel.authState.collectAsState()
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showReauth by remember { mutableStateOf(false) }
     var deleteLoading by remember { mutableStateOf(false) }
@@ -59,6 +60,7 @@ fun SettingsScreen(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
+        val username = authState.username
         if (username != null) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -81,7 +83,7 @@ fun SettingsScreen(
         }
 
         Button(
-            onClick = onLogout,
+            onClick = { authViewModel.logout() },
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.error
             ),
@@ -127,11 +129,11 @@ fun SettingsScreen(
                     onClick = {
                         deleteLoading = true
                         deleteFeedback = null
-                        onDeleteAccount { success, error ->
+                        authViewModel.deleteAccount { success, error ->
                             deleteLoading = false
                             showDeleteConfirm = false
                             if (success) {
-                                // Auth-Listener in AppRoot leitet automatisch zum AuthScreen um
+                                // Auth-Listener leitet automatisch zum AuthScreen um
                             } else if (error == "RECENT_LOGIN_REQUIRED") {
                                 showReauth = true
                             } else {
@@ -209,7 +211,7 @@ fun SettingsScreen(
                         }
                         reauthLoading = true
                         reauthError = null
-                        onReauthAndDelete(reauthEmail, reauthPassword) { success, error ->
+                        authViewModel.reauthenticateAndDelete(reauthEmail, reauthPassword) { success, error ->
                             reauthLoading = false
                             if (success) {
                                 showReauth = false

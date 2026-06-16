@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -25,12 +24,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.walkhomesafe.presentation.components.PasswordResetDialog
+import com.example.walkhomesafe.viewmodel.AuthViewModel
 
 @Composable
 fun AuthScreen(
-    onLogin: (String, String, (Boolean, String?) -> Unit) -> Unit,
-    onRegister: (String, String, String, (Boolean, String?) -> Unit) -> Unit,
-    onResetPassword: (String, (Boolean, String?) -> Unit) -> Unit,
+    authViewModel: AuthViewModel = viewModel(),
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -62,6 +62,22 @@ fun AuthScreen(
 
         Spacer(Modifier.height(32.dp))
 
+        if (isRegister) {
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Benutzername") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Next
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(12.dp))
+        }
+
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -88,22 +104,6 @@ fun AuthScreen(
             ),
             modifier = Modifier.fillMaxWidth()
         )
-
-        if (isRegister) {
-            OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Benutzername") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Next
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(12.dp))
-        }
 
         Spacer(Modifier.height(8.dp))
 
@@ -133,10 +133,6 @@ fun AuthScreen(
                     feedback = "Bitte E-Mail und Passwort eingeben"
                     return@Button
                 }
-                if (password.length < 6) {
-                    feedback = "Passwort muss mindestens 6 Zeichen lang sein"
-                    return@Button
-                }
                 if (isRegister && username.isBlank()) {
                     feedback = "Bitte einen Benutzernamen eingeben"
                     return@Button
@@ -144,14 +140,14 @@ fun AuthScreen(
                 loading = true
                 feedback = null
                 if (isRegister) {
-                    onRegister(email, password, username) { success, error ->
+                    authViewModel.register(email, password, username) { success, error ->
                         loading = false
                         if (!success) {
                             feedback = error ?: "Ein Fehler ist aufgetreten"
                         }
                     }
                 } else {
-                    onLogin(email, password) { success, error ->
+                    authViewModel.login(email, password) { success, error ->
                         loading = false
                         if (!success) {
                             feedback = error ?: "Ein Fehler ist aufgetreten"
@@ -180,50 +176,13 @@ fun AuthScreen(
     }
 
     if (showResetDialog) {
-        var resetEmail by remember { mutableStateOf(email) }
-        var resetLoading by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text("Passwort zurücksetzen") },
-            text = {
-                Column {
-                    Text(
-                        "Gib deine E-Mail-Adresse ein. Wir senden dir einen Link zum Zurücksetzen deines Passworts.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = resetEmail,
-                        onValueChange = { resetEmail = it },
-                        label = { Text("E-Mail") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+        PasswordResetDialog(
+            initialEmail = email,
+            onDismiss = { showResetDialog = false },
+            onResetPassword = { resetEmail, callback ->
+                authViewModel.resetPassword(resetEmail, callback)
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (resetEmail.isBlank()) return@Button
-                        resetLoading = true
-                        onResetPassword(resetEmail) { success, error ->
-                            resetLoading = false
-                            showResetDialog = false
-                            feedback = if (success) "Link zum Zurücksetzen gesendet" else (error ?: "Fehler")
-                        }
-                    },
-                    enabled = !resetLoading
-                ) {
-                    Text(if (resetLoading) "Wird gesendet..." else "Senden")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text("Abbrechen")
-                }
-            }
+            onFeedback = { feedback = it }
         )
     }
 }

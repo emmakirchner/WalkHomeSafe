@@ -33,32 +33,10 @@ fun AppRoot() {
     )
 
     if (authState.firebaseUser == null) {
-        AuthScreen(
-            onLogin = { email, password, callback ->
-                authViewModel.login(email, password, callback)
-            },
-            onRegister = { email, password, username, callback ->
-                authViewModel.register(email, password, username, callback)
-            },
-            onResetPassword = { email, callback ->
-                authViewModel.resetPassword(email, callback)
-            }
-        )
+        AuthScreen()
     } else if (!authState.isEmailVerified) {
-        VerifyEmailScreen(
-            email = authState.firebaseUser!!.email ?: "",
-            onResend = { callback -> authViewModel.resendVerificationEmail(callback) },
-            onRefresh = { callback -> authViewModel.checkEmailVerified(callback) },
-            onLogout = { authViewModel.logout() }
-        )
+        VerifyEmailScreen()
     } else {
-        MainScreen(
-            username = authState.username,
-            onLogout = { authViewModel.logout() },
-            onDeleteAccount = { callback -> authViewModel.deleteAccount(callback) },
-            onReauthAndDelete = { email, password, callback ->
-                authViewModel.reauthenticateAndDelete(email, password, callback)
-            }
-        )
+        MainScreen()
     }
 }

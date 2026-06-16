@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,14 +20,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.walkhomesafe.viewmodel.AuthViewModel
 
 @Composable
 fun VerifyEmailScreen(
-    email: String,
-    onResend: ((Boolean, String?) -> Unit) -> Unit,
-    onRefresh: ((Boolean) -> Unit) -> Unit,
-    onLogout: () -> Unit,
+    authViewModel: AuthViewModel = viewModel(),
 ) {
+    val authState by authViewModel.authState.collectAsState()
+    val email = authState.firebaseUser?.email ?: ""
     var feedback by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
 
@@ -68,7 +70,7 @@ fun VerifyEmailScreen(
             onClick = {
                 loading = true
                 feedback = null
-                onRefresh { verified ->
+                authViewModel.checkEmailVerified { verified ->
                     loading = false
                     if (verified) {
                         feedback = null
@@ -89,7 +91,7 @@ fun VerifyEmailScreen(
             onClick = {
                 loading = true
                 feedback = null
-                onResend { success, error ->
+                authViewModel.resendVerificationEmail { success, error ->
                     loading = false
                     feedback = if (success) "Bestätigungs-E-Mail erneut gesendet" else (error ?: "Fehler")
                 }
@@ -101,7 +103,7 @@ fun VerifyEmailScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        TextButton(onClick = onLogout) {
+        TextButton(onClick = { authViewModel.logout() }) {
             Text("Anderes Konto verwenden")
         }
     }

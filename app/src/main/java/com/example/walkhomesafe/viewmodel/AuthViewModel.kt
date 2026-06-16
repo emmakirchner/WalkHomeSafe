@@ -2,9 +2,14 @@ package com.example.walkhomesafe.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +48,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                     auth.currentUser?.sendEmailVerification()
                     onResult(true, null)
                 } else {
-                    onResult(false, task.exception?.message)
+                    onResult(false, localizedError(task.exception))
                 }
             }
     }
@@ -54,9 +59,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 if (task.isSuccessful) {
                     onResult(true, null)
                 } else {
-                    onResult(false, task.exception?.message)
+                    onResult(false, localizedError(task.exception))
                 }
             }
+    }
+
+    private fun localizedError(exception: Throwable?): String {
+        return when (exception) {
+            is FirebaseAuthInvalidUserException -> "Kein Konto mit dieser E-Mail-Adresse gefunden"
+            is FirebaseAuthInvalidCredentialsException -> "Falsche E-Mail oder falsches Passwort"
+            is FirebaseAuthWeakPasswordException -> "Das Passwort muss mindestens 6 Zeichen lang sein"
+            is FirebaseAuthUserCollisionException -> "Diese E-Mail-Adresse wird bereits verwendet"
+            is FirebaseTooManyRequestsException -> "Zu viele fehlgeschlagene Versuche. Bitte später erneut versuchen"
+            else -> exception?.message ?: "Ein Fehler ist aufgetreten"
+        }
     }
 
     fun resendVerificationEmail(onResult: (Boolean, String?) -> Unit) {
