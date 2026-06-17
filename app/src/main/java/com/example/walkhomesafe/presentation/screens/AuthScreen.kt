@@ -57,7 +57,8 @@ fun AuthScreen(
 
         Text(
             text = if (isRegister) "Neues Konto erstellen" else "Anmelden",
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(Modifier.height(32.dp))

@@ -45,8 +45,14 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         .setDisplayName(username)
                         .build()
                     auth.currentUser?.updateProfile(profileUpdate)
-                    auth.currentUser?.sendEmailVerification()
-                    onResult(true, null)
+                        ?.addOnCompleteListener { profileTask ->
+                            if (profileTask.isSuccessful) {
+                                auth.currentUser?.sendEmailVerification()
+                                onResult(true, null)
+                            } else {
+                                onResult(false, profileTask.exception?.message ?: "Profil-Update fehlgeschlagen")
+                            }
+                        }
                 } else {
                     onResult(false, localizedError(task.exception))
                 }
@@ -66,9 +72,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun localizedError(exception: Throwable?): String {
         return when (exception) {
+            is FirebaseAuthWeakPasswordException -> "Das Passwort muss mindestens 6 Zeichen lang sein"
             is FirebaseAuthInvalidUserException -> "Kein Konto mit dieser E-Mail-Adresse gefunden"
             is FirebaseAuthInvalidCredentialsException -> "Falsche E-Mail oder falsches Passwort"
-            is FirebaseAuthWeakPasswordException -> "Das Passwort muss mindestens 6 Zeichen lang sein"
             is FirebaseAuthUserCollisionException -> "Diese E-Mail-Adresse wird bereits verwendet"
             is FirebaseTooManyRequestsException -> "Zu viele fehlgeschlagene Versuche. Bitte später erneut versuchen"
             else -> exception?.message ?: "Ein Fehler ist aufgetreten"

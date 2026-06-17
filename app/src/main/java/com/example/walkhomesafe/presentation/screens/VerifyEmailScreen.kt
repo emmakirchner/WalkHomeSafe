@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.viewmodel.AuthViewModel
@@ -50,7 +51,9 @@ fun VerifyEmailScreen(
         Text(
             text = "Wir haben eine Bestätigungs-E-Mail an $email gesendet. Bitte prüfe dein Postfach und klicke auf den Bestätigungslink.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
         )
 
         Spacer(Modifier.height(8.dp))
