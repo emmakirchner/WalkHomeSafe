@@ -12,6 +12,7 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -24,6 +25,7 @@ data class AuthState(
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
 
     private val _authState = MutableStateFlow(
         AuthState(auth.currentUser, auth.currentUser?.isEmailVerified == true, auth.currentUser?.displayName)
@@ -41,14 +43,27 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
+                    val user = auth.currentUser ?: run {
+                        onResult(false, "Benutzer konnte nicht erstellt werden")
+                        return@addOnCompleteListener
+                    }
                     val profileUpdate = UserProfileChangeRequest.Builder()
                         .setDisplayName(username)
                         .build()
-                    auth.currentUser?.updateProfile(profileUpdate)
+                    user.updateProfile(profileUpdate)
                         ?.addOnCompleteListener { profileTask ->
                             if (profileTask.isSuccessful) {
-                                auth.currentUser?.sendEmailVerification()
-                                onResult(true, null)
+                                val userData = hashMapOf(
+                                    "username" to username,
+                                    "email" to email
+                                )
+                                firestore.collection("users")
+                                    .document(user.uid)
+                                    .set(userData)
+                                    .addOnCompleteListener {
+                                        user.sendEmailVerification()
+                                        onResult(true, null)
+                                    }
                             } else {
                                 onResult(false, profileTask.exception?.message ?: "Profil-Update fehlgeschlagen")
                             }
