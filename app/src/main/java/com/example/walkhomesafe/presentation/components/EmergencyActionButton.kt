@@ -1,6 +1,7 @@
 package com.example.walkhomesafe.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
@@ -48,13 +49,13 @@ private const val CROSS = "\u2715"
 @Composable
 fun EmergencyActionButton(
     modifier: Modifier = Modifier,
+    isAlarmActive: Boolean = false,
     onShortPress: () -> Unit,
     onLongPressRelease: () -> Unit,
     onCancel: () -> Unit
 ) {
     var isPressed by remember { mutableStateOf(false) }
     var cancelHovered by remember { mutableStateOf(false) }
-    var isAlarmActive by remember { mutableStateOf(false) }
     val isWhite = isPressed || isAlarmActive
 
     Box(
@@ -63,7 +64,7 @@ fun EmergencyActionButton(
             .height(260.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(brush = backgroundBrush(isWhite))
-            .pointerInput(Unit) {
+            .pointerInput(isAlarmActive) {
                 val cancelPx = 72.dp.toPx()
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -76,7 +77,6 @@ fun EmergencyActionButton(
                             if (change != null && !change.pressed) {
                                 if (isInCancelZone(change.position.x, change.position.y, size.width.toFloat(), cancelPx)) {
                                     isPressed = false
-                                    isAlarmActive = false
                                     onCancel()
                                 }
                                 released = true
@@ -109,7 +109,6 @@ fun EmergencyActionButton(
                                 onCancel()
                             } else {
                                 onLongPressRelease()
-                                isAlarmActive = true
                             }
                             isPressed = false
                             cancelHovered = false
@@ -121,7 +120,7 @@ fun EmergencyActionButton(
     ) {
         SosContent(isWhite, isAlarmActive)
         if (isPressed || isAlarmActive) {
-            CancelZone(Modifier.align(Alignment.TopEnd), cancelHovered)
+            CancelZone(Modifier.align(Alignment.TopEnd), cancelHovered, onCancel)
         }
     }
 }
@@ -194,7 +193,7 @@ private fun SosHintRow(isWhite: Boolean, isAlarmActive: Boolean) {
 }
 
 @Composable
-fun CancelZone(modifier: Modifier, isHovered: Boolean) {
+fun CancelZone(modifier: Modifier, isHovered: Boolean, onClick: () -> Unit) {
     Box(
         modifier = modifier
             .padding(12.dp)
@@ -202,7 +201,8 @@ fun CancelZone(modifier: Modifier, isHovered: Boolean) {
             .background(
                 color = if (isHovered) RedBright else GrayMedium,
                 shape = CircleShape
-            ),
+            )
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(
