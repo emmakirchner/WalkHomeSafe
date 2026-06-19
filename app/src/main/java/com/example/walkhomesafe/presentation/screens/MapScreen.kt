@@ -18,8 +18,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -152,9 +154,10 @@ fun MapScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(0.75f)) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             uiSettings = MapUiSettings(
                 myLocationButtonEnabled = permissionsViewModel.hasFineLocationPermission(),
@@ -217,82 +220,83 @@ fun MapScreen(
             }
         }
 
-        if (!isGpsEnabled) {
-            Card(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOff,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                    Text(
-                        text = "GPS ist deaktiviert. Aktiviere GPS f\u00fcr eine genaue Standortbestimmung.",
-                        modifier = Modifier.padding(start = 8.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-
-        Card(
+        Column(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth(0.85f)
-                .padding(top = if (!isGpsEnabled) 72.dp else 8.dp),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                .align(Alignment.TopStart)
+                .padding(start = 8.dp, top = 8.dp)
         ) {
-            Column {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { mapViewModel.searchLocation(it) },
+            if (!isGpsEnabled) {
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Ort oder Adresse suchen...") },
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, contentDescription = "Suchen")
-                    },
-                    trailingIcon = if (selectedLocation != null) {
-                        {
-                            IconButton(onClick = { mapViewModel.clearSelection() }) {
-                                Icon(Icons.Default.Close, contentDescription = "Auswahl l\u00f6schen")
-                            }
-                        }
-                    } else null,
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0f)
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     )
-                )
-
-                if (suggestions.isNotEmpty()) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surface
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            suggestions.forEach { suggestion ->
-                                Text(
-                                    text = suggestion.text,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { mapViewModel.selectSuggestion(suggestion) }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                        Icon(
+                            imageVector = Icons.Default.LocationOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "GPS ist deaktiviert. Aktiviere GPS f\u00fcr eine genaue Standortbestimmung.",
+                            modifier = Modifier.padding(start = 8.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(0.80f),
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { mapViewModel.searchLocation(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Ort oder Adresse suchen...") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Search, contentDescription = "Suchen")
+                        },
+                        trailingIcon = if (selectedLocation != null) {
+                            {
+                                IconButton(onClick = { mapViewModel.clearSelection() }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Auswahl l\u00f6schen")
+                                }
+                            }
+                        } else null,
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0f)
+                        )
+                    )
+
+                    if (suggestions.isNotEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            Column {
+                                suggestions.forEach { suggestion ->
+                                    Text(
+                                        text = suggestion.text,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { mapViewModel.selectSuggestion(suggestion) }
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
                             }
                         }
                     }
@@ -313,11 +317,14 @@ fun MapScreen(
             )
         }
 
+        }
+
         Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .weight(0.25f)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -350,10 +357,16 @@ fun MapScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
             if (selectedLocation == null) {
-                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "W\u00e4hle einen Ort auf der Karte oder suche nach einer Adresse, um Berichte zu sehen.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = "Keine Berichte für diesen Ort gefunden.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
