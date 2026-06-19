@@ -5,6 +5,8 @@ import android.location.Location
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.walkhomesafe.services.PlacesRepository
+import com.example.walkhomesafe.model.NearbyPlace
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -16,6 +18,7 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.android.libraries.places.api.net.PlacesClient
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +45,7 @@ class MapViewModel(
         LocationServices.getFusedLocationProviderClient(application)
 
     private val placesClient: PlacesClient = Places.createClient(application)
-
+    private val placesRepository: PlacesRepository = PlacesRepository(application)
     private val defaultLocation = LatLng(52.5200, 13.4050)
 
     private val _uiState = MutableStateFlow<MapUiState>(MapUiState.Loading)
@@ -55,6 +58,21 @@ class MapViewModel(
     private val _suggestions = MutableStateFlow<List<Suggestion>>(emptyList())
     private val _selectedLocation = MutableStateFlow<LatLng?>(null)
     private val _selectedAddress = MutableStateFlow("")
+
+    private val _showPublicLocations = MutableStateFlow(true)
+    val showPublicLocations: StateFlow<Boolean> = _showPublicLocations.asStateFlow()
+
+    private val _showClosedPlaces = MutableStateFlow(false)
+    val showClosedPlaces: StateFlow<Boolean> = _showClosedPlaces.asStateFlow()
+
+    private val _nearbyPlaces = MutableStateFlow<List<NearbyPlace>>(emptyList())
+    val nearbyPlaces: StateFlow<List<NearbyPlace>> = _nearbyPlaces.asStateFlow()
+
+    private val _isLoadingPlaces = MutableStateFlow(false)
+    val isLoadingPlaces: StateFlow<Boolean> = _isLoadingPlaces.asStateFlow()
+
+    private var currentLocation: LatLng? = null
+    private var placesFetchJob: Job? = null
 
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     val savedCameraPosition: StateFlow<CameraPosition> = _savedCameraPosition.asStateFlow()
@@ -143,6 +161,21 @@ class MapViewModel(
         _suggestions.value = emptyList()
     }
 
+    fun togglePublicLocationsFilter() {
+        val newValue = !_showPublicLocations.value
+        _showPublicLocations.value = newValue
+
+        if (newValue && _nearbyPlaces.value.isEmpty()) {
+            currentLocation?.let { fetchNearbyPlaces(it) }
+        }
+    }
+
+    fun toggleClosedPlacesFilter() {
+        val newValue = !_showClosedPlaces.value
+        _showClosedPlaces.value = newValue
+        currentLocation?.let { fetchNearbyPlaces(it, includeClosed = newValue) }
+    }
+
     private fun tryFetchCurrentLocation(fallbackToDefault: Boolean): Boolean {
         return try {
             fusedLocationClient.getCurrentLocation(
@@ -164,24 +197,71 @@ class MapViewModel(
 
     private fun handleLocationResult(location: Location?, fallbackToDefault: Boolean) {
         if (location != null) {
-            updateUiWithLocation(LatLng(location.latitude, location.longitude))
+            val latLng = LatLng(location.latitude, location.longitude)
+            updateUiWithLocation(latLng)
             _autoFocusTrigger.value = System.nanoTime()
+            onLocationUpdated(latLng)
         } else {
             try {
                 fusedLocationClient.lastLocation.addOnSuccessListener { lastLocation ->
                     if (lastLocation != null) {
-                        updateUiWithLocation(LatLng(lastLocation.latitude, lastLocation.longitude))
+                        val latLng = LatLng(lastLocation.latitude, lastLocation.longitude)
+                        updateUiWithLocation(latLng)
                         _autoFocusTrigger.value = System.nanoTime()
+                        onLocationUpdated(latLng)
                     } else if (fallbackToDefault) {
                         updateUiWithLocation(defaultLocation)
                         _autoFocusTrigger.value = System.nanoTime()
+                        onLocationUpdated(defaultLocation)
                     }
                 }
             } catch (e: SecurityException) {
                 if (fallbackToDefault) {
                     updateUiWithLocation(defaultLocation)
                     _autoFocusTrigger.value = System.nanoTime()
+                    onLocationUpdated(defaultLocation)
                 }
+            }
+        }
+    }
+
+    private fun onLocationUpdated(latLng: LatLng) {
+        val shouldFetch = _showPublicLocations.value && hasLocationChangedSignificantly(currentLocation, latLng)
+        currentLocation = latLng
+
+        if (shouldFetch) {
+            fetchNearbyPlaces(latLng)
+        }
+    }
+
+    private fun hasLocationChangedSignificantly(oldLocation: LatLng?, newLocation: LatLng): Boolean {
+        if (oldLocation == null) return true
+
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(
+            oldLocation.latitude, oldLocation.longitude,
+            newLocation.latitude, newLocation.longitude,
+            results
+        )
+        return results[0] > 100.0f
+    }
+
+    private fun fetchNearbyPlaces(location: LatLng, includeClosed: Boolean = false) {
+        placesFetchJob?.cancel()
+
+        placesFetchJob = viewModelScope.launch {
+            _isLoadingPlaces.value = true
+            try {
+                val result = placesRepository.searchNearbyPlaces(
+                    currentLocation = location,
+                    radiusMeters = 800,
+                    includeClosed = includeClosed
+                )
+                _nearbyPlaces.value = result.getOrDefault(emptyList())
+            } catch (e: Exception) {
+                _nearbyPlaces.value = emptyList()
+            } finally {
+                _isLoadingPlaces.value = false
             }
         }
     }

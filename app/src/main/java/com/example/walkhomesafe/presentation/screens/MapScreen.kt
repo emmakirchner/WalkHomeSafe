@@ -1,8 +1,13 @@
 package com.example.walkhomesafe.presentation.screens
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.location.LocationManager
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -19,6 +26,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,17 +53,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.walkhomesafe.model.NearbyPlace
+import com.example.walkhomesafe.model.PlaceType
 import com.example.walkhomesafe.presentation.screens.report.CreateScreen
 import com.example.walkhomesafe.viewmodel.MapUiState
 import com.example.walkhomesafe.viewmodel.MapViewModel
+import android.util.Log
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.compose.rememberMarkerState
+import com.example.walkhomesafe.R
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 import kotlinx.coroutines.delay
 
@@ -108,6 +122,19 @@ fun MapScreen(
         mapViewModel.updateSavedCameraPosition(cameraPositionState.position)
     }
 
+    val showPublicLocations by mapViewModel.showPublicLocations.collectAsState()
+    val showClosedPlaces by mapViewModel.showClosedPlaces.collectAsState()
+    val nearbyPlaces by mapViewModel.nearbyPlaces.collectAsState()
+
+    val mapStyleOptions = remember(context) {
+        try {
+            MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark_no_pois)
+        } catch (e: Exception) {
+            Log.e("MapScreen", "Error loading map style", e)
+            null
+        }
+    }
+
     val locationManager = remember { context.getSystemService(Context.LOCATION_SERVICE) as LocationManager }
     var isGpsEnabled by remember { mutableStateOf(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) }
 
@@ -125,146 +152,147 @@ fun MapScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(0.75f)) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                uiSettings = MapUiSettings(myLocationButtonEnabled = permissionsViewModel.hasFineLocationPermission()),
-                properties = MapProperties(
-                    isMyLocationEnabled = permissionsViewModel.hasFineLocationPermission()
-                ),
-                onMapClick = { latLng ->
-                    mapViewModel.selectLocation(latLng, "${latLng.latitude}, ${latLng.longitude}")
+    Box(modifier = Modifier.fillMaxSize()) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            uiSettings = MapUiSettings(
+                myLocationButtonEnabled = permissionsViewModel.hasFineLocationPermission(),
+                mapToolbarEnabled = false
+            ),
+            properties = MapProperties(
+                isMyLocationEnabled = permissionsViewModel.hasFineLocationPermission(),
+                mapStyleOptions = mapStyleOptions
+            ),
+            onMapClick = { latLng ->
+                mapViewModel.selectLocation(latLng, "${latLng.latitude}, ${latLng.longitude}")
+            }
+        ) {
+            selectedLocation?.let { location ->
+                key(location) {
+                    Marker(
+                        state = remember { MarkerState(position = location) },
+                        title = selectedAddress.ifBlank { null },
+                        snippet = null
+                    )
                 }
-            ) {
-                selectedLocation?.let { location ->
-                    key(location) {
-                        Marker(
-                            state = rememberMarkerState(position = location),
-                            title = selectedAddress.ifBlank { null },
-                            snippet = null
+            }
+
+            if (showPublicLocations) {
+                val filteredPlaces = if (showClosedPlaces) {
+                    nearbyPlaces
+                } else {
+                    nearbyPlaces.filter { it.isOpenNow == true || it.closingTime != null }
+                }
+                filteredPlaces.forEach { place ->
+                    PlaceMarker(place = place)
+                }
+            }
+        }
+
+        when (val state = uiState) {
+            is MapUiState.Loading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            is MapUiState.Location -> {
+                LaunchedEffect(state.latLng, autoFocusTrigger) {
+                    if (!mapViewModel.hasAnimated) {
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newLatLngZoom(state.latLng, 15f)
                         )
+                        mapViewModel.hasAnimated = true
                     }
                 }
             }
-
-            when (val state = uiState) {
-                is MapUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                is MapUiState.Location -> {
-                    LaunchedEffect(state.latLng, autoFocusTrigger) {
-                        if (!mapViewModel.hasAnimated) {
-                            cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(state.latLng, 15f)
-                            )
-                            mapViewModel.hasAnimated = true
-                        }
-                    }
-                }
-
-                is MapUiState.Error -> {
-                    Text(
-                        text = state.message,
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
+            is MapUiState.Error -> {
+                Text(
+                    text = state.message,
+                    modifier = Modifier.align(Alignment.Center),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
+        }
 
-            Column(
+        if (!isGpsEnabled) {
+            Card(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
+                    .padding(8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
             ) {
-                if (!isGpsEnabled) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOff,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Text(
-                                text = "GPS ist deaktiviert. Aktiviere GPS für eine genaue Standortbestimmung.",
-                                modifier = Modifier.padding(start = 8.dp),
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { mapViewModel.searchLocation(it) },
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            placeholder = { Text("Ort oder Adresse suchen...") },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = "Suchen"
-                                )
-                            },
-                            trailingIcon = if (selectedLocation != null) {
-                                {
-                                    IconButton(onClick = { mapViewModel.clearSelection() }) {
-                                        Icon(
-                                            Icons.Default.Close,
-                                            contentDescription = "Auswahl l\u00f6schen"
-                                        )
-                                    }
-                                }
-                            } else null,
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0f)
-                            )
-                        )
+                    Icon(
+                        imageVector = Icons.Default.LocationOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = "GPS ist deaktiviert. Aktiviere GPS f\u00fcr eine genaue Standortbestimmung.",
+                        modifier = Modifier.padding(start = 8.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
 
-                        if (suggestions.isNotEmpty()) {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.surface
-                            ) {
-                                Column {
-                                    suggestions.forEach { suggestion ->
-                                        Text(
-                                            text = suggestion.text,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable { mapViewModel.selectSuggestion(suggestion) }
-                                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-                                }
+        Card(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth(0.85f)
+                .padding(top = if (!isGpsEnabled) 72.dp else 8.dp),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { mapViewModel.searchLocation(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Ort oder Adresse suchen...") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = "Suchen")
+                    },
+                    trailingIcon = if (selectedLocation != null) {
+                        {
+                            IconButton(onClick = { mapViewModel.clearSelection() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Auswahl l\u00f6schen")
+                            }
+                        }
+                    } else null,
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0f)
+                    )
+                )
+
+                if (suggestions.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface
+                    ) {
+                        Column {
+                            suggestions.forEach { suggestion ->
+                                Text(
+                                    text = suggestion.text,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { mapViewModel.selectSuggestion(suggestion) }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
                         }
                     }
@@ -274,8 +302,21 @@ fun MapScreen(
 
         Column(
             modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 10.dp, bottom = 100.dp)
+        ) {
+            PublicLocationsFilterButton(
+                isEnabled = showPublicLocations,
+                isDebugMode = showClosedPlaces,
+                onClick = { mapViewModel.togglePublicLocationsFilter() },
+                onLongClick = { mapViewModel.toggleClosedPlacesFilter() }
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .weight(0.25f)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Row(
@@ -312,7 +353,7 @@ fun MapScreen(
             if (selectedLocation == null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Wähle einen Ort auf der Karte oder suche nach einer Adresse, um Berichte zu sehen.",
+                    text = "W\u00e4hle einen Ort auf der Karte oder suche nach einer Adresse, um Berichte zu sehen.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -320,3 +361,118 @@ fun MapScreen(
         }
     }
 }
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PublicLocationsFilterButton(
+    isEnabled: Boolean,
+    isDebugMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .size(40.dp)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shadowElevation = 6.dp
+    ) {
+        Icon(
+            imageVector = if (isEnabled || isDebugMode) Icons.Filled.Place else Icons.Outlined.Place,
+            contentDescription = when {
+                isDebugMode -> "Debug: Geschlossene Orte ausblenden"
+                isEnabled -> "Filter: Offene Orte verstecken"
+                else -> "Filter: Offene Orte anzeigen"
+            }
+        )
+    }
+}
+
+@Composable
+private fun PlaceMarker(
+    place: NearbyPlace
+) {
+    val markerState = remember(place.id) {
+        MarkerState(position = place.latLng)
+    }
+
+    val statusText = when {
+        place.isOpenNow == false -> "Geschlossen"
+        place.closingTime == "24/7" -> "Ge\u00f6ffnet 24/7"
+        place.closingTime != null -> "Ge\u00f6ffnet bis ${place.closingTime} Uhr"
+        place.isOpenNow == true -> "Ge\u00f6ffnet"
+        else -> "Unbekannt"
+    }
+
+    val snippetText = "${place.placeType.displayName} | $statusText"
+
+    Marker(
+        state = markerState,
+        title = place.name,
+        snippet = snippetText,
+        icon = when {
+            place.isOpenNow == false -> greyMarker
+            place.isOpenNow == null && place.closingTime == null -> unknownMarker
+            else -> getMarkerIconForType(place.placeType)
+        }
+    )
+}
+
+private val greyMarker: BitmapDescriptor by lazy {
+    val size = 40
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint().apply {
+        color = android.graphics.Color.GRAY
+        alpha = 200
+    }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+    BitmapDescriptorFactory.fromBitmap(bitmap)
+}
+
+private val unknownMarker: BitmapDescriptor by lazy {
+    val size = 40
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint().apply {
+        color = android.graphics.Color.LTGRAY
+        alpha = 200
+    }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+    BitmapDescriptorFactory.fromBitmap(bitmap)
+}
+
+private val markerCache = mutableMapOf<PlaceType, BitmapDescriptor>()
+
+private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
+    return markerCache.getOrPut(placeType) {
+        val size = 40
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint().apply {
+            color = placeType.darkerColor
+            alpha = 255
+        }
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        BitmapDescriptorFactory.fromBitmap(bitmap)
+    }
+}
+
+private val PlaceType.darkerColor: Int
+    get() = when (this) {
+        PlaceType.RESTAURANT -> android.graphics.Color.rgb(200, 80, 0)
+        PlaceType.CAFE -> android.graphics.Color.rgb(200, 140, 0)
+        PlaceType.SHOP -> android.graphics.Color.rgb(0, 100, 200)
+        PlaceType.LIBRARY -> android.graphics.Color.rgb(0, 130, 130)
+        PlaceType.SUPERMARKET -> android.graphics.Color.rgb(0, 130, 0)
+        PlaceType.PHARMACY -> android.graphics.Color.rgb(190, 0, 120)
+        PlaceType.POLICE_STATION -> android.graphics.Color.rgb(0, 45, 180)
+        PlaceType.HOSPITAL -> android.graphics.Color.rgb(180, 0, 0)
+        PlaceType.GAS_STATION -> android.graphics.Color.rgb(100, 0, 180)
+    }
