@@ -56,6 +56,18 @@ class ReportViewModel() : ViewModel() {
         )
     }
 
+    fun resetForm() {
+        _uiState.value = _uiState.value.copy(
+            title = "",
+            description = "",
+            ratings = emptyMap(),
+            saving = false,
+            showErrors = false,
+            showSuccess = false,
+            showError = null
+        )
+    }
+
     fun save(latitude: Double, longitude: Double) {
         val state = _uiState.value
         if (state.title.isBlank() || state.description.isBlank() || state.categories.any { (state.ratings[it.id] ?: 0) == 0 }) {

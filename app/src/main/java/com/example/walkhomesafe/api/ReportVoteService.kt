@@ -3,30 +3,33 @@ package com.example.walkhomesafe.api
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
 
 object ReportVoteService {
 
     private const val BASE_URL = "https://walkhomesafe-frfgcrdtfkaqg3cd.germanywestcentral-01.azurewebsites.net"
     private val json = Json { ignoreUnknownKeys = true }
 
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .build()
+
     suspend fun vote(votes: List<SaveReportVoteDto>): Boolean = withContext(Dispatchers.IO) {
-        val connection = URL("$BASE_URL/api/report-votes").openConnection() as HttpURLConnection
-        connection.requestMethod = "PUT"
-        connection.doOutput = true
-        connection.setRequestProperty("Content-Type", "application/json")
-        connection.connectTimeout = 10000
-        connection.readTimeout = 10000
+        val body = json.encodeToString(votes).toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("$BASE_URL/api/report-votes")
+            .put(body)
+            .build()
         try {
-            val body = json.encodeToString(votes)
-            OutputStreamWriter(connection.outputStream).use { it.write(body) }
-            connection.responseCode == 200
+            val response = client.newCall(request).execute()
+            response.use { it.isSuccessful }
         } catch (e: Exception) {
             false
-        } finally {
-            connection.disconnect()
         }
     }
 }

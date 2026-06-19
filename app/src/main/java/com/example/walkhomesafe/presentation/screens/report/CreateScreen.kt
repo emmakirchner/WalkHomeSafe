@@ -52,6 +52,10 @@ fun CreateScreen(
     val uiState by reportViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(Unit) {
+        reportViewModel.resetForm()
+    }
+
     LaunchedEffect(uiState.showSuccess) {
         if (uiState.showSuccess) {
             snackbarHostState.showSnackbar("Speichern erfolgreich")

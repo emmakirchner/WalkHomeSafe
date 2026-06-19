@@ -1,32 +1,44 @@
 package com.example.walkhomesafe.api
 
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
 
 object ReportService {
 
     private const val BASE_URL = "https://walkhomesafe-frfgcrdtfkaqg3cd.germanywestcentral-01.azurewebsites.net"
     private val json = Json { ignoreUnknownKeys = true }
 
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .build()
+
     suspend fun create(request: SaveReportDto): Int? = withContext(Dispatchers.IO) {
-        val connection = URL("$BASE_URL/api/reports").openConnection() as HttpURLConnection
-        connection.requestMethod = "PUT"
-        connection.doOutput = true
-        connection.setRequestProperty("Content-Type", "application/json")
-        connection.connectTimeout = 10000
-        connection.readTimeout = 10000
+        val user = FirebaseAuth.getInstance().currentUser ?: return@withContext null
+        val idToken = try {
+            user.getIdToken(true).await().token ?: return@withContext null
+        } catch (e: Exception) {
+            return@withContext null
+        }
+        val body = json.encodeToString(request).toRequestBody("application/json".toMediaType())
+        val req = Request.Builder()
+            .url("$BASE_URL/api/reports")
+            .put(body)
+            .addHeader("Authorization", "Bearer $idToken")
+            .build()
         try {
-            val body = json.encodeToString(request)
-            OutputStreamWriter(connection.outputStream).use { it.write(body) }
-            connection.responseCode
+            val response = client.newCall(req).execute()
+            response.use { it.code }
         } catch (e: Exception) {
             null
-        } finally {
-            connection.disconnect()
         }
     }
 
@@ -40,31 +52,31 @@ object ReportService {
         longitude?.let { params.add("Longitude=$it") }
         radiusInMeters?.let { params.add("RadiusInMeters=$it") }
         val query = if (params.isNotEmpty()) "?${params.joinToString("&")}" else ""
-        val connection = URL("$BASE_URL/api/reports$query").openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.connectTimeout = 10000
-        connection.readTimeout = 10000
+        val request = Request.Builder()
+            .url("$BASE_URL/api/reports$query")
+            .get()
+            .build()
         try {
-            val response = connection.inputStream.bufferedReader().readText()
-            json.decodeFromString<List<ReportDto>>(response)
+            val response = client.newCall(request).execute()
+            response.use {
+                val body = it.body?.string() ?: return@use emptyList()
+                json.decodeFromString<List<ReportDto>>(body)
+            }
         } catch (e: Exception) {
             emptyList()
-        } finally {
-            connection.disconnect()
         }
     }
 
     suspend fun delete(id: Int): Boolean = withContext(Dispatchers.IO) {
-        val connection = URL("$BASE_URL/api/reports/$id").openConnection() as HttpURLConnection
-        connection.requestMethod = "DELETE"
-        connection.connectTimeout = 10000
-        connection.readTimeout = 10000
+        val request = Request.Builder()
+            .url("$BASE_URL/api/reports/$id")
+            .delete()
+            .build()
         try {
-            connection.responseCode == 200
+            val response = client.newCall(request).execute()
+            response.use { it.isSuccessful }
         } catch (e: Exception) {
             false
-        } finally {
-            connection.disconnect()
         }
     }
 }
