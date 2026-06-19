@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.okhttp)
     implementation(libs.googleid)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)

@@ -13,6 +13,7 @@ import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.walkhomesafe.services.UserService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -127,19 +128,21 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             onResult(false, "Kein Benutzer angemeldet")
             return
         }
-        user.delete()
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    onResult(true, null)
-                } else {
-                    val message = task.exception?.message ?: "Unbekannter Fehler"
-                    if (task.exception is FirebaseAuthRecentLoginRequiredException) {
-                        onResult(false, "RECENT_LOGIN_REQUIRED")
+        UserService.deleteUser { _, _ ->
+            user.delete()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        onResult(true, null)
                     } else {
-                        onResult(false, message)
+                        val message = task.exception?.message ?: "Unbekannter Fehler"
+                        if (task.exception is FirebaseAuthRecentLoginRequiredException) {
+                            onResult(false, "RECENT_LOGIN_REQUIRED")
+                        } else {
+                            onResult(false, message)
+                        }
                     }
                 }
-            }
+        }
     }
 
     fun reauthenticateAndDelete(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
@@ -151,14 +154,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         user.reauthenticate(credential)
             .addOnCompleteListener { reauthTask ->
                 if (reauthTask.isSuccessful) {
-                    user.delete()
-                        .addOnCompleteListener { deleteTask ->
-                            if (deleteTask.isSuccessful) {
-                                onResult(true, null)
-                            } else {
-                                onResult(false, deleteTask.exception?.message ?: "Fehler beim Löschen")
+                    UserService.deleteUser { _, _ ->
+                        user.delete()
+                            .addOnCompleteListener { deleteTask ->
+                                if (deleteTask.isSuccessful) {
+                                    onResult(true, null)
+                                } else {
+                                    onResult(false, deleteTask.exception?.message ?: "Fehler beim Löschen")
+                                }
                             }
-                        }
+                    }
                 } else {
                     onResult(false, reauthTask.exception?.message ?: "Re-Authentifizierung fehlgeschlagen")
                 }
