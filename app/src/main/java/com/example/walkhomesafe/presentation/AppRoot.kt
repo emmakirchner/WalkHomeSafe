@@ -1,16 +1,24 @@
 package com.example.walkhomesafe.presentation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.services.permissions.PermissionHost
+import com.example.walkhomesafe.presentation.screens.AuthScreen
 import com.example.walkhomesafe.presentation.screens.MainScreen
+import com.example.walkhomesafe.presentation.screens.VerifyEmailScreen
+import com.example.walkhomesafe.viewmodel.AuthViewModel
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 
 @Composable
 fun AppRoot() {
 
+    val authViewModel: AuthViewModel = viewModel()
     val permissionsViewModel: PermissionsViewModel = viewModel()
+
+    val authState by authViewModel.authState.collectAsState()
 
     val startupPermissions = remember {
         permissionsViewModel.getPendingStartupPermissions()
@@ -24,5 +32,11 @@ fun AppRoot() {
         }
     )
 
-    MainScreen()
+    if (authState.firebaseUser == null) {
+        AuthScreen()
+    } else if (!authState.isEmailVerified) {
+        VerifyEmailScreen()
+    } else {
+        MainScreen()
+    }
 }
