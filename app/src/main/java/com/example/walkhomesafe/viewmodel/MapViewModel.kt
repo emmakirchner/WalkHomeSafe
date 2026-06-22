@@ -2,6 +2,7 @@ package com.example.walkhomesafe.viewmodel
 
 import android.app.Application
 import android.location.Location
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.walkhomesafe.services.PlacesRepository
@@ -12,6 +13,11 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
+import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
+import com.google.android.libraries.places.api.net.PlacesClient
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +25,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+
+data class Suggestion(
+    val placeId: String,
+    val text: String
+)
 
 sealed interface MapUiState {
     data object Loading : MapUiState
@@ -32,15 +43,21 @@ class MapViewModel(
 
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(application)
+
+    private val placesClient: PlacesClient = Places.createClient(application)
     private val placesRepository: PlacesRepository = PlacesRepository(application)
+    private val defaultLocation = LatLng(52.5200, 13.4050)
 
     private val _uiState = MutableStateFlow<MapUiState>(MapUiState.Loading)
-    private val defaultLocation = LatLng(52.5200, 13.4050)
     private val _savedCameraPosition = MutableStateFlow(
         CameraPosition.fromLatLngZoom(defaultLocation, 12f)
     )
     private var hasFetchedOnce = false
     private val _autoFocusTrigger = MutableStateFlow(0L)
+    private val _searchQuery = MutableStateFlow("")
+    private val _suggestions = MutableStateFlow<List<Suggestion>>(emptyList())
+    private val _selectedLocation = MutableStateFlow<LatLng?>(null)
+    private val _selectedAddress = MutableStateFlow("")
 
     private val _showPublicLocations = MutableStateFlow(true)
     val showPublicLocations: StateFlow<Boolean> = _showPublicLocations.asStateFlow()
@@ -61,6 +78,10 @@ class MapViewModel(
     val savedCameraPosition: StateFlow<CameraPosition> = _savedCameraPosition.asStateFlow()
     var hasAnimated = false
     val autoFocusTrigger: StateFlow<Long> = _autoFocusTrigger.asStateFlow()
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    val suggestions: StateFlow<List<Suggestion>> = _suggestions.asStateFlow()
+    val selectedLocation: StateFlow<LatLng?> = _selectedLocation.asStateFlow()
+    val selectedAddress: StateFlow<String> = _selectedAddress.asStateFlow()
 
     fun fetchLocation() {
         if (hasFetchedOnce) return
@@ -83,6 +104,61 @@ class MapViewModel(
         viewModelScope.launch {
             tryFetchCurrentLocation(false)
         }
+    }
+
+    fun searchLocation(query: String) {
+        _searchQuery.value = query
+        if (query.isBlank()) {
+            _suggestions.value = emptyList()
+            return
+        }
+        val request = FindAutocompletePredictionsRequest.builder()
+            .setQuery(query)
+            .setCountries(listOf("DE"))
+            .build()
+        placesClient.findAutocompletePredictions(request)
+            .addOnSuccessListener { response ->
+                _suggestions.value = response.autocompletePredictions.map {
+                    Suggestion(it.placeId, it.getFullText(null).toString())
+                }
+            }
+            .addOnFailureListener {
+                _suggestions.value = emptyList()
+            }
+    }
+
+    fun selectSuggestion(suggestion: Suggestion) {
+        val fields = listOf(
+            Place.Field.ID,
+            Place.Field.DISPLAY_NAME,
+            Place.Field.FORMATTED_ADDRESS,
+            Place.Field.LOCATION
+        )
+        val request = FetchPlaceRequest.builder(suggestion.placeId, fields).build()
+        placesClient.fetchPlace(request)
+            .addOnSuccessListener { response ->
+                val place = response.place
+                place.location?.let {
+                    selectLocation(
+                        LatLng(it.latitude, it.longitude),
+                        place.formattedAddress ?: place.displayName ?: suggestion.text
+                    )
+                }
+            }
+    }
+
+    fun selectLocation(latLng: LatLng, address: String) {
+        _selectedLocation.value = latLng
+        _selectedAddress.value = address
+        _searchQuery.value = address
+        _suggestions.value = emptyList()
+    }
+
+    fun clearSelection() {
+        _selectedLocation.value = null
+        _selectedAddress.value = ""
+        _searchQuery.value = ""
+        _suggestions.value = emptyList()
     }
 
     fun togglePublicLocationsFilter() {

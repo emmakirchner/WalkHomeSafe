@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.walkhomesafe.presentation.AppRoot
 import com.example.walkhomesafe.ui.theme.WalkHomeSafeTheme
+import com.google.android.libraries.places.api.Places
 import com.example.walkhomesafe.presentation.widget.ACTION_ALARM
 import com.example.walkhomesafe.presentation.widget.ACTION_SMS
 import com.example.walkhomesafe.presentation.widget.EXTRA_SOS_ACTION
@@ -16,6 +17,7 @@ import com.example.walkhomesafe.presentation.widget.WidgetTrigger
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Places.initializeWithNewPlacesApiEnabled(applicationContext, getString(R.string.google_maps_key))
         enableEdgeToEdge()
 
         handleWidgetIntent(intent)
