@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,7 +77,14 @@ import com.example.walkhomesafe.R
 import com.example.walkhomesafe.api.ReportDto
 import com.example.walkhomesafe.api.ReportRatingDto
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.ui.draw.rotate
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.HorizontalDivider
@@ -88,6 +96,21 @@ fun MapScreen(
     permissionsViewModel: PermissionsViewModel = viewModel()
 ) {
     var showCreateReport by remember { mutableStateOf(false) }
+    var collapsed by remember { mutableStateOf(false) }
+    var visuallyCollapsed by remember { mutableStateOf(false) }
+    LaunchedEffect(collapsed) {
+        if (collapsed) {
+            delay(600)
+            visuallyCollapsed = true
+        } else {
+            visuallyCollapsed = false
+        }
+    }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (collapsed) -90f else 0f,
+        animationSpec = tween(durationMillis = 600),
+        label = "arrowRotation"
+    )
 
     if (showCreateReport) {
         val loc = mapViewModel.selectedLocation.collectAsState().value
@@ -165,7 +188,7 @@ fun MapScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(0.75f)) {
+        Box(modifier = Modifier.weight(if (visuallyCollapsed) 1f else 0.75f)) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
@@ -332,14 +355,25 @@ fun MapScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.25f)
+                .then(
+                    if (visuallyCollapsed) Modifier.wrapContentHeight()
+                    else Modifier.weight(0.25f)
+                )
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .verticalScroll(rememberScrollState())
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { collapsed = !collapsed },
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (collapsed) "Erweitern" else "Einklappen",
+                    modifier = Modifier.rotate(arrowRotation),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Filled.Place,
                     contentDescription = null,
@@ -367,41 +401,61 @@ fun MapScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            AnimatedVisibility(
+                visible = !collapsed,
+                enter = expandVertically(
+                    expandFrom = Alignment.Top,
+                    animationSpec = tween(durationMillis = 600)
+                ),
+                exit = shrinkVertically(
+                    shrinkTowards = Alignment.Top,
+                    animationSpec = tween(durationMillis = 600)
+                )
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
 
-            if (isLoadingReports) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                    if (isLoadingReports) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Lade Berichte...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else if (reports.isNotEmpty()) {
+                    reports.forEach { report ->
+                        key(report.id) {
+                            ReportCard(report = report)
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
+                    }
+                } else {
                     Text(
-                        text = "Lade Berichte...",
+                        text = "Keine Berichte in der Nähe gefunden.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else if (reports.isNotEmpty()) {
-                reports.forEach { report ->
-                    key(report.id) {
-                        ReportCard(report = report)
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
                 }
-            } else {
-                Text(
-                    text = "Keine Berichte in der Nähe gefunden.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
+}
 }
 
 @OptIn(ExperimentalFoundationApi::class)
