@@ -40,6 +40,12 @@ data class ReportRatingDto(
 )
 
 @Serializable
+data class ReportVoteDto(
+    val reportId: Int,
+    val isUpvote: Boolean
+)
+
+@Serializable
 data class ReportCategoryDto(
     val id: Int,
     val name: String = ""
