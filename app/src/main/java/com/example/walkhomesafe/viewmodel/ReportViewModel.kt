@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.walkhomesafe.api.ReportCategoryDto
 import com.example.walkhomesafe.api.ReportCategoryService
+import com.example.walkhomesafe.api.ReportDto
 import com.example.walkhomesafe.api.ReportRatingDto
 import com.example.walkhomesafe.api.ReportService
 import com.example.walkhomesafe.api.SaveReportDto
@@ -21,7 +22,10 @@ data class ReportUiState(
     val saving: Boolean = false,
     val showErrors: Boolean = false,
     val showSuccess: Boolean = false,
-    val showError: String? = null
+    val showError: String? = null,
+    val reportsByUser: List<ReportDto> = emptyList(),
+    val reportsByUserLoading: Boolean = true,
+    val editingReport: ReportDto? = null
 )
 
 class ReportViewModel() : ViewModel() {
@@ -64,7 +68,8 @@ class ReportViewModel() : ViewModel() {
             saving = false,
             showErrors = false,
             showSuccess = false,
-            showError = null
+            showError = null,
+            editingReport = null
         )
     }
 
@@ -76,20 +81,23 @@ class ReportViewModel() : ViewModel() {
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(saving = true, showError = null)
-            val responseCode = ReportService.create(
-                SaveReportDto(
-                    title = state.title,
-                    description = state.description,
-                    latitude = latitude,
-                    longitude = longitude,
-                    ratingCategories = state.categories.map { cat ->
-                        ReportRatingDto(
-                            name = cat.name,
-                            rating = state.ratings[cat.id] ?: 0
-                        )
-                    }
-                )
+            val dto = SaveReportDto(
+                title = state.title,
+                description = state.description,
+                latitude = latitude,
+                longitude = longitude,
+                ratingCategories = state.categories.map { cat ->
+                    ReportRatingDto(
+                        name = cat.name,
+                        rating = state.ratings[cat.id] ?: 0
+                    )
+                }
             )
+            val responseCode = if (state.editingReport != null) {
+                ReportService.update(state.editingReport.id, dto)
+            } else {
+                ReportService.create(dto)
+            }
             _uiState.value = _uiState.value.copy(
                 saving = false,
                 showSuccess = responseCode == 200,
@@ -97,5 +105,36 @@ class ReportViewModel() : ViewModel() {
                     else "Fehler beim Speichern (${responseCode ?: "–"})"
             )
         }
+    }
+
+    fun loadReportsByUser() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(reportsByUserLoading = true)
+            val reports = ReportService.getForCurrentUser()
+            _uiState.value = _uiState.value.copy(
+                reportsByUser = reports,
+                reportsByUserLoading = false
+            )
+        }
+    }
+
+    fun deleteReport(id: Int) {
+        viewModelScope.launch {
+            val success = ReportService.delete(id)
+            if (success) {
+                _uiState.value = _uiState.value.copy(
+                    reportsByUser = _uiState.value.reportsByUser.filter { it.id != id }
+                )
+            }
+        }
+    }
+
+    fun editReport(report: ReportDto) {
+        _uiState.value = _uiState.value.copy(
+            editingReport = report,
+            title = report.title,
+            description = report.description,
+            ratings = report.ratingCategories?.associate { it.id to it.rating } ?: emptyMap()
+        )
     }
 }

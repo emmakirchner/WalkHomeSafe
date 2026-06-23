@@ -38,28 +38,38 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.walkhomesafe.api.ReportDto
 import com.example.walkhomesafe.viewmodel.ReportViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateScreen(
+fun CreateOrEditScreen(
     latitude: Double,
     longitude: Double,
     address: String,
     onBack: () -> Unit,
+    reportToEdit: ReportDto? = null,
     reportViewModel: ReportViewModel = viewModel()
 ) {
     val uiState by reportViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val isEditMode = reportToEdit != null
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(reportToEdit) {
+        if (isEditMode) {
+            reportViewModel.editReport(reportToEdit)
+        }
+    }
+
+    val handleBack = {
         reportViewModel.resetForm()
+        onBack()
     }
 
     LaunchedEffect(uiState.showSuccess) {
         if (uiState.showSuccess) {
             snackbarHostState.showSnackbar("Speichern erfolgreich")
-            onBack()
+            handleBack()
         }
     }
     LaunchedEffect(uiState.showError) {
@@ -72,10 +82,10 @@ fun CreateScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Report erstellen") },
+                title = { Text(if (isEditMode) "Report bearbeiten" else "Report erstellen") },
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = handleBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Zur\u00fcck"
@@ -212,7 +222,7 @@ fun CreateScreen(
                         onClick = { reportViewModel.save(latitude, longitude) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Speichern")
+                        Text(if (isEditMode) "Aktualisieren" else "Speichern")
                     }
                 }
             }
