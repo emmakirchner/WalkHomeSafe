@@ -74,6 +74,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.android.gms.maps.model.LatLng
 import com.example.walkhomesafe.R
 import com.example.walkhomesafe.api.ReportDto
 import com.example.walkhomesafe.api.ReportRatingDto
@@ -106,6 +107,7 @@ fun MapScreen(
     var showCreateReport by remember { mutableStateOf(false) }
     var collapsed by remember { mutableStateOf(false) }
     var visuallyCollapsed by remember { mutableStateOf(false) }
+    var selectedReportId by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(collapsed) {
         if (collapsed) {
             delay(600)
@@ -231,6 +233,19 @@ fun MapScreen(
                 }
                 filteredPlaces.forEach { place ->
                     PlaceMarker(place = place)
+                }
+            }
+
+            selectedReportId?.let { id ->
+                val report = reports.find { it.id == id }
+                report?.let { r ->
+                    key("selected_report_${r.id}") {
+                        Marker(
+                            state = remember { MarkerState(position = LatLng(r.latitude, r.longitude)) },
+                            title = r.title,
+                            icon = selectedReportMarker
+                        )
+                    }
                 }
             }
         }
@@ -452,7 +467,11 @@ fun MapScreen(
                             ReportCard(
                                 report = report,
                                 userVote = userVotes[report.id],
-                                onVote = { isUpvote -> mapViewModel.voteOnReport(report.id, isUpvote) }
+                                onVote = { isUpvote -> mapViewModel.voteOnReport(report.id, isUpvote) },
+                                isSelected = selectedReportId == report.id,
+                                onToggleSelect = {
+                                    selectedReportId = if (selectedReportId == report.id) null else report.id
+                                }
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                         }
@@ -557,6 +576,34 @@ private val unknownMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
+private val selectedReportMarker: BitmapDescriptor by lazy {
+    val size = 60
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val fillPaint = Paint().apply {
+        color = android.graphics.Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 2, fillPaint)
+    val borderPaint = Paint().apply {
+        color = android.graphics.Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+        isAntiAlias = true
+    }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 2, borderPaint)
+    val textPaint = Paint().apply {
+        color = android.graphics.Color.RED
+        textSize = 36f
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+        isAntiAlias = true
+    }
+    canvas.drawText("!", size / 2f, size / 2f + 14f, textPaint)
+    BitmapDescriptorFactory.fromBitmap(bitmap)
+}
+
 private val markerCache = mutableMapOf<PlaceType, BitmapDescriptor>()
 
 private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
@@ -587,7 +634,7 @@ private val PlaceType.darkerColor: Int
     }
 
 @Composable
-private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) -> Unit) {
+private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) -> Unit, isSelected: Boolean, onToggleSelect: () -> Unit) {
     var showDetails by remember { mutableStateOf(false) }
 
     Card(
@@ -649,6 +696,13 @@ private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) 
                 )
 
                 Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = onToggleSelect) {
+                    Text(
+                        text = "Auf Karte",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isSelected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 TextButton(onClick = { showDetails = true }) {
                     Icon(
                         imageVector = Icons.Filled.Info,
