@@ -8,6 +8,7 @@ import android.location.LocationManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -72,7 +73,13 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.example.walkhomesafe.R
+import com.example.walkhomesafe.api.ReportDto
+import com.example.walkhomesafe.api.ReportRatingDto
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
+import androidx.compose.animation.animateContentSize
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.HorizontalDivider
 import kotlinx.coroutines.delay
 
 @Composable
@@ -92,6 +99,7 @@ fun MapScreen(
                 address = addr,
                 onBack = {
                     mapViewModel.clearSelection()
+                    mapViewModel.refreshReports()
                     showCreateReport = false
                 }
             )
@@ -127,6 +135,8 @@ fun MapScreen(
     val showPublicLocations by mapViewModel.showPublicLocations.collectAsState()
     val showClosedPlaces by mapViewModel.showClosedPlaces.collectAsState()
     val nearbyPlaces by mapViewModel.nearbyPlaces.collectAsState()
+    val reports by mapViewModel.reports.collectAsState()
+    val isLoadingReports by mapViewModel.isLoadingReports.collectAsState()
 
     val mapStyleOptions = remember(context) {
         try {
@@ -358,15 +368,34 @@ fun MapScreen(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            if (selectedLocation == null) {
-                Text(
-                    text = "W\u00e4hle einen Ort auf der Karte oder suche nach einer Adresse, um Berichte zu sehen.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+            if (isLoadingReports) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Lade Berichte...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (reports.isNotEmpty()) {
+                reports.forEach { report ->
+                    key(report.id) {
+                        ReportCard(report = report)
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                }
             } else {
                 Text(
-                    text = "Keine Berichte für diesen Ort gefunden.",
+                    text = "Keine Berichte in der Nähe gefunden.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -489,3 +518,83 @@ private val PlaceType.darkerColor: Int
         PlaceType.HOSPITAL -> android.graphics.Color.rgb(180, 0, 0)
         PlaceType.GAS_STATION -> android.graphics.Color.rgb(100, 0, 180)
     }
+
+@Composable
+private fun ReportCard(report: ReportDto) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val netScore = report.upvoteCount - report.downvoteCount
+    val scoreColor = when {
+        netScore > 0 -> Color(0xFF4CAF50)
+        netScore < 0 -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val scoreText = if (netScore > 0) "+$netScore" else netScore.toString()
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded }
+            .animateContentSize(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = report.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = scoreText,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = scoreColor
+                )
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "${report.userName} · ${report.createdAt.take(10)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (expanded && !report.ratingCategories.isNullOrEmpty()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                report.ratingCategories.forEach { category ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "${category.name}: ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        StarRating(rating = category.rating)
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StarRating(rating: Int) {
+    Row {
+        repeat(5) { index ->
+            Icon(
+                imageVector = if (index < rating) Icons.Filled.Star else Icons.Outlined.Star,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = if (index < rating)
+                    Color(0xFFFFC107)
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            )
+        }
+    }
+}
