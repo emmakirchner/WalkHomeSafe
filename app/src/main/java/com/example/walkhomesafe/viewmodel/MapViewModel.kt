@@ -5,6 +5,8 @@ import android.location.Location
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.walkhomesafe.api.ReportDto
+import com.example.walkhomesafe.api.ReportService
 import com.example.walkhomesafe.services.PlacesRepository
 import com.example.walkhomesafe.model.NearbyPlace
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -19,6 +21,7 @@ import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,8 +74,15 @@ class MapViewModel(
     private val _isLoadingPlaces = MutableStateFlow(false)
     val isLoadingPlaces: StateFlow<Boolean> = _isLoadingPlaces.asStateFlow()
 
+    private val _reports = MutableStateFlow<List<ReportDto>>(emptyList())
+    val reports: StateFlow<List<ReportDto>> = _reports.asStateFlow()
+
+    private val _isLoadingReports = MutableStateFlow(false)
+    val isLoadingReports: StateFlow<Boolean> = _isLoadingReports.asStateFlow()
+
     private var currentLocation: LatLng? = null
     private var placesFetchJob: Job? = null
+    private var autoRefreshJob: Job? = null
 
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     val savedCameraPosition: StateFlow<CameraPosition> = _savedCameraPosition.asStateFlow()
@@ -161,6 +171,10 @@ class MapViewModel(
         _suggestions.value = emptyList()
     }
 
+    fun refreshReports() {
+        currentLocation?.let { fetchReports(it) }
+    }
+
     fun togglePublicLocationsFilter() {
         val newValue = !_showPublicLocations.value
         _showPublicLocations.value = newValue
@@ -226,11 +240,19 @@ class MapViewModel(
     }
 
     private fun onLocationUpdated(latLng: LatLng) {
-        val shouldFetch = _showPublicLocations.value && hasLocationChangedSignificantly(currentLocation, latLng)
+        val isFirstLocation = currentLocation == null
+        val shouldFetchPlaces = _showPublicLocations.value && hasLocationChangedSignificantly(currentLocation, latLng)
+        val shouldFetchReports = hasLocationChangedSignificantly(currentLocation, latLng)
         currentLocation = latLng
 
-        if (shouldFetch) {
+        if (shouldFetchPlaces) {
             fetchNearbyPlaces(latLng)
+        }
+        if (shouldFetchReports) {
+            fetchReports(latLng)
+        }
+        if (isFirstLocation) {
+            startAutoRefresh()
         }
     }
 
@@ -264,6 +286,43 @@ class MapViewModel(
                 _isLoadingPlaces.value = false
             }
         }
+    }
+
+    private fun fetchReports(location: LatLng) {
+        viewModelScope.launch {
+            _isLoadingReports.value = true
+            try {
+                val allReports = ReportService.get()
+                _reports.value = allReports.filter { report ->
+                    val results = FloatArray(1)
+                    android.location.Location.distanceBetween(
+                        location.latitude, location.longitude,
+                        report.latitude, report.longitude,
+                        results
+                    )
+                    results[0] <= 800f
+                }
+            } catch (e: Exception) {
+                _reports.value = emptyList()
+            } finally {
+                _isLoadingReports.value = false
+            }
+        }
+    }
+
+    private fun startAutoRefresh() {
+        if (autoRefreshJob?.isActive == true) return
+        autoRefreshJob = viewModelScope.launch {
+            while (true) {
+                delay(60_000)
+                currentLocation?.let { fetchReports(it) }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        autoRefreshJob?.cancel()
     }
 
     private fun updateUiWithLocation(latLng: LatLng) {
