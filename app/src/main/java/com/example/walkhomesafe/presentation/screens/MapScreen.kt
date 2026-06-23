@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -92,6 +93,9 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.window.Dialog
+import androidx.compose.material.icons.filled.Info
 import kotlinx.coroutines.delay
 
 @Composable
@@ -584,13 +588,10 @@ private val PlaceType.darkerColor: Int
 
 @Composable
 private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+    var showDetails by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { expanded = !expanded }
-            .animateContentSize(),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -646,23 +647,28 @@ private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) 
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
 
-            if (expanded && !report.ratingCategories.isNullOrEmpty()) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                report.ratingCategories.forEach { category ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "${category.name}: ",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        StarRating(rating = category.rating)
-                    }
-                    Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(onClick = { showDetails = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Details")
                 }
             }
         }
+    }
+
+    if (showDetails) {
+        ReportDetailsDialog(
+            report = report,
+            userVote = userVote,
+            onVote = onVote,
+            onDismiss = { showDetails = false }
+        )
     }
 }
 
@@ -679,6 +685,110 @@ private fun StarRating(rating: Int) {
                 else
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
+        }
+    }
+}
+
+@Composable
+private fun ReportDetailsDialog(
+    report: ReportDto,
+    userVote: Boolean?,
+    onVote: (Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.85f)
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = report.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Filled.Close, contentDescription = "Schließen")
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${report.userName} · ${report.createdAt.take(10)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (report.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = report.description,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { onVote(true) }) {
+                        Icon(
+                            imageVector = if (userVote == true) Icons.Filled.ThumbUp
+                            else Icons.Outlined.ThumbUp,
+                            contentDescription = "Upvote",
+                            tint = if (userVote == true) Color(0xFF4CAF50)
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = report.upvoteCount.toString(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    IconButton(onClick = { onVote(false) }) {
+                        Icon(
+                            imageVector = if (userVote == false) Icons.Filled.ThumbDown
+                            else Icons.Outlined.ThumbDown,
+                            contentDescription = "Downvote",
+                            tint = if (userVote == false) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = report.downvoteCount.toString(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (!report.ratingCategories.isNullOrEmpty()) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    report.ratingCategories.forEach { category ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "${category.name}: ",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            StarRating(rating = category.rating)
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+            }
         }
     }
 }
