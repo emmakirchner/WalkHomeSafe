@@ -86,7 +86,11 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.ui.draw.rotate
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.HorizontalDivider
 import kotlinx.coroutines.delay
 
@@ -159,6 +163,7 @@ fun MapScreen(
     val showClosedPlaces by mapViewModel.showClosedPlaces.collectAsState()
     val nearbyPlaces by mapViewModel.nearbyPlaces.collectAsState()
     val reports by mapViewModel.reports.collectAsState()
+    val userVotes by mapViewModel.userVotes.collectAsState()
     val isLoadingReports by mapViewModel.isLoadingReports.collectAsState()
 
     val mapStyleOptions = remember(context) {
@@ -440,7 +445,11 @@ fun MapScreen(
                 } else if (reports.isNotEmpty()) {
                     reports.forEach { report ->
                         key(report.id) {
-                            ReportCard(report = report)
+                            ReportCard(
+                                report = report,
+                                userVote = userVotes[report.id],
+                                onVote = { isUpvote -> mapViewModel.voteOnReport(report.id, isUpvote) }
+                            )
                             Spacer(modifier = Modifier.height(6.dp))
                         }
                     }
@@ -574,16 +583,8 @@ private val PlaceType.darkerColor: Int
     }
 
 @Composable
-private fun ReportCard(report: ReportDto) {
+private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-
-    val netScore = report.upvoteCount - report.downvoteCount
-    val scoreColor = when {
-        netScore > 0 -> Color(0xFF4CAF50)
-        netScore < 0 -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    val scoreText = if (netScore > 0) "+$netScore" else netScore.toString()
 
     Card(
         modifier = Modifier
@@ -596,27 +597,56 @@ private fun ReportCard(report: ReportDto) {
         )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = report.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = scoreText,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = scoreColor
-                )
-            }
+            Text(
+                text = report.title,
+                style = MaterialTheme.typography.bodyMedium
+            )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "${report.userName} · ${report.createdAt.take(10)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = { onVote(true) },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = if (userVote == true) Icons.Filled.ThumbUp
+                        else Icons.Outlined.ThumbUp,
+                        contentDescription = "Upvote",
+                        tint = if (userVote == true) Color(0xFF4CAF50)
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Text(
+                    text = report.upvoteCount.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                IconButton(
+                    onClick = { onVote(false) },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = if (userVote == false) Icons.Filled.ThumbDown
+                        else Icons.Outlined.ThumbDown,
+                        contentDescription = "Downvote",
+                        tint = if (userVote == false) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Text(
+                    text = report.downvoteCount.toString(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             if (expanded && !report.ratingCategories.isNullOrEmpty()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

@@ -1,6 +1,8 @@
 package com.example.walkhomesafe.api
 
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -19,11 +21,40 @@ object ReportVoteService {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
+    private suspend fun getIdToken(): String? {
+        val user = FirebaseAuth.getInstance().currentUser ?: return null
+        return try {
+            user.getIdToken(true).await().token
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun getMyVotes(): List<ReportVoteDto> = withContext(Dispatchers.IO) {
+        val idToken = getIdToken() ?: return@withContext emptyList()
+        val request = Request.Builder()
+            .url("$BASE_URL/api/report-votes/by-user")
+            .get()
+            .addHeader("Authorization", "Bearer $idToken")
+            .build()
+        try {
+            val response = client.newCall(request).execute()
+            response.use {
+                val body = it.body?.string() ?: return@use emptyList()
+                json.decodeFromString<List<ReportVoteDto>>(body)
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun vote(votes: List<SaveReportVoteDto>): Boolean = withContext(Dispatchers.IO) {
+        val idToken = getIdToken() ?: return@withContext false
         val body = json.encodeToString(votes).toRequestBody("application/json".toMediaType())
         val request = Request.Builder()
             .url("$BASE_URL/api/report-votes")
             .put(body)
+            .addHeader("Authorization", "Bearer $idToken")
             .build()
         try {
             val response = client.newCall(request).execute()

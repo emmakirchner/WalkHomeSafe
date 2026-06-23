@@ -7,6 +7,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.walkhomesafe.api.ReportDto
 import com.example.walkhomesafe.api.ReportService
+import com.example.walkhomesafe.api.ReportVoteService
+import com.example.walkhomesafe.api.SaveReportVoteDto
 import com.example.walkhomesafe.services.PlacesRepository
 import com.example.walkhomesafe.model.NearbyPlace
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -79,6 +81,9 @@ class MapViewModel(
 
     private val _isLoadingReports = MutableStateFlow(false)
     val isLoadingReports: StateFlow<Boolean> = _isLoadingReports.asStateFlow()
+
+    private val _userVotes = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+    val userVotes: StateFlow<Map<Int, Boolean>> = _userVotes.asStateFlow()
 
     private var currentLocation: LatLng? = null
     private var placesFetchJob: Job? = null
@@ -173,6 +178,38 @@ class MapViewModel(
 
     fun refreshReports() {
         currentLocation?.let { fetchReports(it) }
+    }
+
+    fun voteOnReport(reportId: Int, isUpvote: Boolean) {
+        viewModelScope.launch {
+            val currentVote = _userVotes.value[reportId]
+            val dto = SaveReportVoteDto(
+                reportId = reportId,
+                isUpvote = if (currentVote == isUpvote) null else isUpvote
+            )
+            val success = ReportVoteService.vote(listOf(dto))
+            if (success) {
+                val newVote = dto.isUpvote
+                _userVotes.value = _userVotes.value.toMutableMap().apply {
+                    if (newVote == null) remove(reportId)
+                    else put(reportId, newVote)
+                }
+                _reports.value = _reports.value.map { report ->
+                    if (report.id != reportId) return@map report
+                    var up = report.upvoteCount
+                    var down = report.downvoteCount
+                    when {
+                        currentVote == true && newVote == null -> { up-- }
+                        currentVote == true && newVote == false -> { up--; down++ }
+                        currentVote == false && newVote == null -> { down-- }
+                        currentVote == false && newVote == true -> { down--; up++ }
+                        currentVote == null && newVote == true -> { up++ }
+                        currentVote == null && newVote == false -> { down++ }
+                    }
+                    report.copy(upvoteCount = up, downvoteCount = down)
+                }
+            }
+        }
     }
 
     fun togglePublicLocationsFilter() {
@@ -302,6 +339,8 @@ class MapViewModel(
                     )
                     results[0] <= 800f
                 }
+                val votes = ReportVoteService.getMyVotes()
+                _userVotes.value = votes.associate { it.reportId to it.isUpvote }
             } catch (e: Exception) {
                 _reports.value = emptyList()
             } finally {
