@@ -1,16 +1,22 @@
 package com.example.walkhomesafe.services
 
+import android.Manifest
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.example.walkhomesafe.MainActivity
 import com.example.walkhomesafe.data.emergencyContactsFlow
 import com.example.walkhomesafe.data.emergencyMessageFlow
 import com.example.walkhomesafe.data.loadTimerEmergencySent
 import com.example.walkhomesafe.data.saveTimerEmergencySent
+import com.example.walkhomesafe.services.WalkHomeTimerState.TimerPhase
 import com.example.walkhomesafe.viewmodel.LOCATION_PLACEHOLDER
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -27,7 +33,10 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
     }
 
     private fun handleExpired(context: Context) {
-        WalkHomeTimerState.expire()
+        val currentPhase = WalkHomeTimerState.state.value.phase
+        if (currentPhase == TimerPhase.IDLE || currentPhase == TimerPhase.COUNTDOWN) {
+            WalkHomeTimerState.expire()
+        }
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createTimerChannel(notificationManager)
@@ -62,12 +71,20 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
 
         notificationManager.notify(NOTIFICATION_TIMER_EXPIRED, notification)
 
-        scheduleAlarm(context, ACTION_TIMER_REMINDER, REMINDER_DELAY_MS, REQUEST_REMINDER)
-        scheduleAlarm(context, ACTION_TIMER_EMERGENCY, EMERGENCY_DELAY_MS, REQUEST_EMERGENCY)
+        if (currentPhase != TimerPhase.REMINDER && currentPhase != TimerPhase.EMERGENCY) {
+            scheduleAlarm(context, ACTION_TIMER_REMINDER, REMINDER_DELAY_MS, REQUEST_REMINDER)
+            scheduleAlarm(context, ACTION_TIMER_EMERGENCY, EMERGENCY_DELAY_MS, REQUEST_EMERGENCY)
+        }
     }
 
     private fun handleReminder(context: Context) {
-        WalkHomeTimerState.showReminder()
+        val alreadySent = runBlocking { loadTimerEmergencySent(context) }
+        if (alreadySent) return
+
+        val currentPhase = WalkHomeTimerState.state.value.phase
+        if (currentPhase == TimerPhase.EXPIRED) {
+            WalkHomeTimerState.showReminder()
+        }
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createTimerChannel(notificationManager)
@@ -82,7 +99,7 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_TIMER)
             .setContentTitle("Heimweg-Timer - Erinnerung")
-            .setContentText("Bist du noch unterwegs? In 2 Min. wird dein Notfallkontakt informiert!")
+            .setContentText("Bist du noch unterwegs? Dein Notfallkontakt wird gleich informiert!")
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .addAction(android.R.drawable.ic_input_add, "Angekommen", pendingDeactivateIntent)
             .setAutoCancel(false)
@@ -111,12 +128,32 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
         }
 
         if (contacts.isNotEmpty()) {
-            val message = runBlocking {
+            var message = runBlocking {
                 emergencyMessageFlow(context).first()
             } ?: "NOTFALL! Ich bin hier: $LOCATION_PLACEHOLDER. Bitte schaut sofort nach mir! (automatisierte Nachricht)"
 
-            val cleanedMessage = message.replace(LOCATION_PLACEHOLDER, "")
-            MessageSender(context).send(contacts, cleanedMessage)
+            val locationLink = if (ContextCompat.checkSelfPermission(
+                    context, Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                @Suppress("DEPRECATION")
+                val loc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                if (loc != null) {
+                    "https://maps.google.com/?q=${loc.latitude},${loc.longitude}"
+                } else null
+            } else null
+
+            if (locationLink != null && message.contains(LOCATION_PLACEHOLDER)) {
+                message = message.replaceFirst(LOCATION_PLACEHOLDER, locationLink)
+            } else if (locationLink != null) {
+                message = "$message\n$locationLink"
+            } else {
+                message = message.replaceFirst(LOCATION_PLACEHOLDER, "")
+            }
+
+            MessageSender(context).send(contacts, message)
         }
 
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -165,17 +202,24 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
         )
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
         try {
-            alarmManager.setExactAndAllowWhileIdle(
-                android.app.AlarmManager.RTC_WAKEUP,
-                System.currentTimeMillis() + delayMs,
+            alarmManager.setAlarmClock(
+                android.app.AlarmManager.AlarmClockInfo(System.currentTimeMillis() + delayMs, null),
                 pendingIntent
             )
-        } catch (e: SecurityException) {
-            alarmManager.set(
-                android.app.AlarmManager.RTC_WAKEUP,
-                System.currentTimeMillis() + delayMs,
-                pendingIntent
-            )
+        } catch (e: Exception) {
+            try {
+                alarmManager.setExactAndAllowWhileIdle(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + delayMs,
+                    pendingIntent
+                )
+            } catch (e2: SecurityException) {
+                alarmManager.set(
+                    android.app.AlarmManager.RTC_WAKEUP,
+                    System.currentTimeMillis() + delayMs,
+                    pendingIntent
+                )
+            }
         }
     }
 

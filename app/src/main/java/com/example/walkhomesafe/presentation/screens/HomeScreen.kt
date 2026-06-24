@@ -89,6 +89,7 @@ fun HomeScreen(
     val isAlarmActive by homeViewModel.isAlarmActive.collectAsState()
     val timerState by homeViewModel.timerState.collectAsState()
     val remainingSeconds by homeViewModel.remainingSeconds.collectAsState()
+    val timerEndTime by homeViewModel.timerEndTime.collectAsState()
     val timerDurationInput by homeViewModel.timerDurationInput.collectAsState()
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -187,6 +188,7 @@ fun HomeScreen(
             WalkHomeTimerSection(
                 timerState = timerState,
                 remainingSeconds = remainingSeconds,
+                timerEndTime = timerEndTime,
                 timerDurationInput = timerDurationInput,
                 hasContacts = contacts.isNotEmpty(),
                 onSetDuration = homeViewModel::setTimerDuration,
@@ -261,6 +263,7 @@ private fun formatTime(seconds: Int): String {
 private fun WalkHomeTimerSection(
     timerState: WalkHomeTimerState.TimerState,
     remainingSeconds: Int,
+    timerEndTime: Long,
     timerDurationInput: Int,
     hasContacts: Boolean,
     onSetDuration: (Int) -> Unit,
@@ -430,6 +433,17 @@ private fun WalkHomeTimerSection(
                 }
 
                 TimerPhase.EXPIRED -> {
+                    var emergencyCountdown by remember { mutableStateOf(0) }
+
+                    LaunchedEffect(timerEndTime) {
+                        while (true) {
+                            val remaining = ((timerEndTime + 240_000L - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+                            emergencyCountdown = remaining
+                            if (remaining <= 0) break
+                            delay(1000)
+                        }
+                    }
+
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = null,
@@ -445,9 +459,10 @@ private fun WalkHomeTimerSection(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Text(
-                        text = "Bist du angekommen? Timer deaktivieren!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
+                        text = if (emergencyCountdown > 0) "Notfall-SMS in ${emergencyCountdown}s" else "Notfall-SMS wird gesendet...",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = RedBright,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Spacer(Modifier.height(12.dp))
@@ -465,6 +480,17 @@ private fun WalkHomeTimerSection(
                 }
 
                 TimerPhase.REMINDER -> {
+                    var emergencyCountdown by remember { mutableStateOf(0) }
+
+                    LaunchedEffect(timerEndTime) {
+                        while (true) {
+                            val remaining = ((timerEndTime + 240_000L - System.currentTimeMillis()) / 1000).toInt().coerceAtLeast(0)
+                            emergencyCountdown = remaining
+                            if (remaining <= 0) break
+                            delay(1000)
+                        }
+                    }
+
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = null,
@@ -480,9 +506,10 @@ private fun WalkHomeTimerSection(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Text(
-                        text = "In 1,5 Min. wird dein Notfallkontakt informiert!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
+                        text = if (emergencyCountdown > 0) "Notfall-SMS in ${emergencyCountdown}s" else "Notfall-SMS wird gesendet...",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = RedBright,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Spacer(Modifier.height(12.dp))
