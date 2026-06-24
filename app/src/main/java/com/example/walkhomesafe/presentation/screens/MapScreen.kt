@@ -109,8 +109,8 @@ fun MapScreen(
     permissionsViewModel: PermissionsViewModel = viewModel()
 ) {
     var showCreateReport by remember { mutableStateOf(false) }
-    var collapsed by remember { mutableStateOf(false) }
-    var visuallyCollapsed by remember { mutableStateOf(false) }
+    var collapsed by remember { mutableStateOf(true) }
+    var visuallyCollapsed by remember { mutableStateOf(true) }
     var selectedReportId by remember { mutableStateOf<Int?>(null) }
     /** Delays visual collapsing by 600ms for a smooth report panel animation. */
     LaunchedEffect(collapsed) {
@@ -209,7 +209,7 @@ fun MapScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(if (visuallyCollapsed) 1f else 0.75f)) {
+        Box(modifier = Modifier.weight(if (visuallyCollapsed) 1f else 1e-10f)) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
@@ -415,7 +415,7 @@ fun MapScreen(
                 .fillMaxWidth()
                 .then(
                     if (visuallyCollapsed) Modifier.wrapContentHeight()
-                    else Modifier.weight(0.25f)
+                    else Modifier.weight(1f)
                 )
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
@@ -504,7 +504,13 @@ fun MapScreen(
                                 onVote = { isUpvote -> mapViewModel.voteOnReport(report.id, isUpvote) },
                                 isSelected = selectedReportId == report.id,
                                 onToggleSelect = {
-                                    selectedReportId = if (selectedReportId == report.id) null else report.id
+                                    val id = report.id
+                                    if (selectedReportId != id) {
+                                        selectedReportId = id
+                                        collapsed = true
+                                    } else {
+                                        selectedReportId = null
+                                    }
                                 }
                             )
                             Spacer(modifier = Modifier.height(6.dp))
