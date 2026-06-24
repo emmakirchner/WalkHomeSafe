@@ -4,8 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.location.Location
 import android.util.Log
-import com.example.walkhomesafe.model.Report
-import com.example.walkhomesafe.model.Severity
+import com.example.walkhomesafe.api.ReportDto
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Tile
 import com.google.android.gms.maps.model.TileProvider
@@ -19,7 +18,7 @@ import kotlin.math.sinh
 import kotlin.math.sqrt
 
 class DangerHeatmapTileProvider(
-    private val reports: List<Report>,
+    private val reports: List<ReportDto>,
     private val influenceRadiusMeters: Double = 350.0
 ) : TileProvider {
 
@@ -29,8 +28,35 @@ class DangerHeatmapTileProvider(
             val center = LatLng((bounds.north + bounds.south) / 2.0, (bounds.west + bounds.east) / 2.0)
             val halfDiagonal = distanceBetweenInMeters(LatLng(bounds.south, bounds.west), LatLng(bounds.north, bounds.east)) / 2.0
 
-            val relevant = reports.filter { report ->
-                distanceBetweenInMeters(LatLng(report.latitude, report.longitude), center) <= influenceRadiusMeters + halfDiagonal
+            val relevant = reports.mapNotNull { report ->
+                val cats = report.ratingCategories
+                if (cats.isNullOrEmpty()) return@mapNotNull null
+
+                val totalStars = cats.sumOf { it.rating }
+                val maxStars = cats.size * 5
+                val threshold = 9
+                val minStars = cats.size
+
+                val isPositive = totalStars > threshold
+                val weight = (if (isPositive) {
+                    (totalStars - threshold).toDouble() / (maxStars - threshold)
+                } else {
+                    (threshold - totalStars).toDouble() / (threshold - minStars)
+                }).coerceIn(0.0, 1.0)
+
+                val severityFactor = when {
+                    weight >= 0.75 -> 2.0
+                    weight >= 0.50 -> 1.5
+                    weight >= 0.25 -> 1.0
+                    else -> 0.5
+                }
+                val sign = if (isPositive) -1.0 else 1.0
+
+                val latLng = LatLng(report.latitude, report.longitude)
+                val dist = distanceBetweenInMeters(latLng, center)
+                if (dist > influenceRadiusMeters + halfDiagonal) return@mapNotNull null
+
+                HeatmapEntry(report.latitude, report.longitude, severityFactor, sign)
             }
 
             if (relevant.isEmpty()) {
@@ -53,17 +79,15 @@ class DangerHeatmapTileProvider(
                     val lng = bounds.west + (bounds.east - bounds.west) * pixelX / TILE_SIZE
 
                     var netScore = 0.0
-                    for (report in relevant) {
-                        val dlat = (report.latitude - lat) * metersPerDeg
-                        val dlng = (report.longitude - lng) * metersPerDegLng
+                    for (entry in relevant) {
+                        val dlat = (entry.latitude - lat) * metersPerDeg
+                        val dlng = (entry.longitude - lng) * metersPerDegLng
                         val dist = sqrt(dlat * dlat + dlng * dlng)
 
                         if (dist > influenceRadiusMeters) continue
 
                         val influence = gaussianWeight(dist)
-                        val severityFactor = severityWeight(report.severity)
-                        val sign = if (report.isPositive) -1.0 else 1.0
-                        netScore += sign * influence * severityFactor
+                        netScore += entry.sign * influence * entry.severityFactor
                     }
                     grid[gy][gx] = netScore
                 }
@@ -135,12 +159,12 @@ class DangerHeatmapTileProvider(
             return results[0].toDouble()
         }
 
-        private fun severityWeight(severity: Severity): Double = when (severity) {
-            Severity.LOW -> 0.5
-            Severity.MEDIUM -> 1.0
-            Severity.HIGH -> 1.5
-            Severity.CRITICAL -> 2.0
-        }
+        private data class HeatmapEntry(
+            val latitude: Double,
+            val longitude: Double,
+            val severityFactor: Double,
+            val sign: Double
+        )
 
         private fun scoreToColor(score: Double): Int {
             val absScore = abs(score)

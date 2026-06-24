@@ -104,13 +104,13 @@ import androidx.compose.material.icons.filled.Info
 import kotlinx.coroutines.delay
 
 /**
- * Hauptbildschirm der Kartenansicht.
+ * Main map screen view.
  *
- * Enthält die Google-Karte mit Standortverfolgung, Suchleiste,
- * Berichtsliste, Heatmap-Überlagerung und Filter-Buttons.
+ * Contains the Google map with location tracking, search bar,
+ * report list, heatmap overlay, and filter buttons.
  *
- * @param mapViewModel ViewModel für Kartenlogik, Standort und Berichte
- * @param permissionsViewModel ViewModel für Laufzeitberechtigungen
+ * @param mapViewModel ViewModel for map logic, location, and reports
+ * @param permissionsViewModel ViewModel for runtime permissions
  */
 @Composable
 fun MapScreen(
@@ -121,7 +121,7 @@ fun MapScreen(
     var collapsed by remember { mutableStateOf(false) }
     var visuallyCollapsed by remember { mutableStateOf(false) }
     var selectedReportId by remember { mutableStateOf<Int?>(null) }
-    /** Verzögert das visuelle Einklappen um 600ms für eine flüssige Animation des Bericht-Panels. */
+    /** Delays visual collapsing by 600ms for a smooth report panel animation. */
     LaunchedEffect(collapsed) {
         if (collapsed) {
             delay(600)
@@ -130,7 +130,7 @@ fun MapScreen(
             visuallyCollapsed = false
         }
     }
-    /** Animiert die Pfeilrotation beim Einklappen/Ausklappen des Bericht-Panels (600ms). */
+    /** Animates the arrow rotation when collapsing/expanding the report panel (600ms). */
     val arrowRotation by animateFloatAsState(
         targetValue = if (collapsed) -90f else 0f,
         animationSpec = tween(durationMillis = 600),
@@ -164,7 +164,7 @@ fun MapScreen(
     val selectedLocation by mapViewModel.selectedLocation.collectAsState()
     val selectedAddress by mapViewModel.selectedAddress.collectAsState()
 
-    /** Fordert Standortberechtigung beim Start an und initiiert Standortermittlung. */
+    /** Requests location permission on start and initiates location determination. */
     LaunchedEffect(Unit) {
         permissionsViewModel.requestAccessFineLocation {
             mapViewModel.fetchLocation()
@@ -177,7 +177,7 @@ fun MapScreen(
         position = savedCameraPosition
     }
 
-    /** Speichert die Kameraposition bei jeder Bewegung im ViewModel. */
+    /** Saves the camera position on every movement in the ViewModel. */
     LaunchedEffect(cameraPositionState.position) {
         mapViewModel.updateSavedCameraPosition(cameraPositionState.position)
     }
@@ -188,7 +188,6 @@ fun MapScreen(
     val reports by mapViewModel.reports.collectAsState()
     val userVotes by mapViewModel.userVotes.collectAsState()
     val isLoadingReports by mapViewModel.isLoadingReports.collectAsState()
-    val heatmapReports by mapViewModel.heatmapReports.collectAsState()
     val showHeatmap by mapViewModel.showHeatmap.collectAsState()
 
     val mapStyleOptions = remember(context) {
@@ -205,7 +204,7 @@ fun MapScreen(
 
     var wasGpsOff by remember { mutableStateOf(!isGpsEnabled) }
 
-    /** Überwacht den GPS-Status alle 3s; fordert Standortaktualisierung bei Wiederherstellung an. */
+    /** Monitors GPS status every 3s; requests location update on restore. */
     LaunchedEffect(Unit) {
         while (true) {
             val current = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
@@ -271,18 +270,18 @@ fun MapScreen(
 
             val overlayRef = remember { mutableStateOf<TileOverlay?>(null) }
 
-            /** Erzeugt oder entfernt die Heatmap-Kachelüberlagerung basierend auf aktuellen Berichtsdaten. */
-            MapEffect(heatmapReports) { map ->
+            /** Creates or removes the heatmap tile overlay based on current report data. */
+            MapEffect(reports) { map ->
                 overlayRef.value?.remove()
-                if (heatmapReports.isNotEmpty()) {
-                    val provider = DangerHeatmapTileProvider(reports = heatmapReports)
+                if (reports.isNotEmpty()) {
+                    val provider = DangerHeatmapTileProvider(reports = reports)
                     overlayRef.value = map.addTileOverlay(TileOverlayOptions().tileProvider(provider))
                 } else {
                     overlayRef.value = null
                 }
             }
 
-            /** Schaltet die Sichtbarkeit der Heatmap-Überlagerung um, ohne die Kacheln neu aufzubauen. */
+            /** Toggles the heatmap overlay visibility without rebuilding the tiles. */
             LaunchedEffect(showHeatmap) {
                 overlayRef.value?.isVisible = showHeatmap
             }
@@ -296,7 +295,7 @@ fun MapScreen(
                 )
             }
             is MapUiState.Location -> {
-                /** Bewegt die Kamera beim ersten Standortfund zur Nutzerposition (Zoom 15, einmalig). */
+                /** Moves the camera to the user's position on first location fix (zoom 15, one-time). */
                 LaunchedEffect(state.latLng, autoFocusTrigger) {
                     if (!mapViewModel.hasAnimated) {
                         cameraPositionState.animate(
@@ -535,13 +534,13 @@ fun MapScreen(
 }
 
 /**
- * Kreisrunder Button zum Ein-/Ausblenden der Heatmap-Überlagerung.
+ * Circular button to toggle the heatmap overlay visibility.
  *
- * Zeigt ein Layers-Symbol (ausgefüllt = sichtbar, umrissen = ausgeblendet).
+ * Shows a Layers icon (filled = visible, outlined = hidden).
  *
- * @param isEnabled true, wenn die Heatmap aktuell sichtbar ist
- * @param onClick Callback beim Klick auf den Button
- * @param modifier Modifier für Positionierung und Layout
+ * @param isEnabled true if the heatmap is currently visible
+ * @param onClick Callback on button click
+ * @param modifier Modifier for positioning and layout
  */
 @Composable
 private fun HeatmapToggleButton(
@@ -566,16 +565,16 @@ private fun HeatmapToggleButton(
 }
 
 /**
- * Kreisrunder Button zum Filtern öffentlicher Orte auf der Karte.
+ * Circular button for filtering public places on the map.
  *
- * Einfach Klick schaltet offene Orte ein/aus, langer Klick schaltet
- * den Debug-Modus für geschlossene Orte um.
+ * Single click toggles open places on/off, long click toggles
+ * the debug mode for closed places.
  *
- * @param isEnabled true, wenn der Filter aktiv ist
- * @param isDebugMode true, wenn der Debug-Modus aktiv ist
- * @param onClick Callback beim einfachen Klick
- * @param onLongClick Callback beim langen Klick
- * @param modifier Modifier für Positionierung und Layout
+ * @param isEnabled true if the filter is active
+ * @param isDebugMode true if debug mode is active
+ * @param onClick Callback on single click
+ * @param onLongClick Callback on long click
+ * @param modifier Modifier for positioning and layout
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -610,12 +609,12 @@ private fun PublicLocationsFilterButton(
 }
 
 /**
- * Markiert einen öffentlichen Ort auf der Karte.
+ * Marks a public place on the map.
  *
- * Das Symbol wird basierend auf Ortstyp und Öffnungsstatus gewählt:
- * geöffnet = farbig, geschlossen = grau, unbekannt = hellgrau.
+ * The icon is chosen based on place type and open status:
+ * open = colored, closed = grey, unknown = light grey.
  *
- * @param place Der anzuzeigende Ort mit Position, Typ und Öffnungszeiten
+ * @param place The place to display with position, type, and opening hours
  */
 @Composable
 private fun PlaceMarker(
@@ -648,7 +647,7 @@ private fun PlaceMarker(
     )
 }
 
-/** Grauer Marker für geschlossene Orte, als Bitmap einmalig erzeugt und zwischengespeichert. */
+/** Grey marker for closed places, created once as bitmap and cached. */
 private val greyMarker: BitmapDescriptor by lazy {
     val size = 40
     val bitmap = createBitmap(size, size)
@@ -661,7 +660,7 @@ private val greyMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
-/** Hellgrauer Marker für Orte mit unbekanntem Öffnungsstatus, als Bitmap zwischengespeichert. */
+/** Light grey marker for places with unknown open status, cached as bitmap. */
 private val unknownMarker: BitmapDescriptor by lazy {
     val size = 40
     val bitmap = createBitmap(size, size)
@@ -674,7 +673,7 @@ private val unknownMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
-/** Roter Marker mit "!" für den auf der Karte ausgewählten Bericht (60px, besser sichtbar). */
+/** Red marker with "!" for the report selected on the map (60px, more visible). */
 private val selectedReportMarker: BitmapDescriptor by lazy {
     val size = 60
     val bitmap = createBitmap(size, size)
@@ -703,16 +702,16 @@ private val selectedReportMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
-/** Zwischenspeicher für orts typspezifische Marker-Bitmaps, vermeidet Neuerstellung. */
+/** Cache for place-type-specific marker bitmaps, avoids recreation. */
 private val markerCache = mutableMapOf<PlaceType, BitmapDescriptor>()
 
 /**
- * Liefert das Markersymbol für einen Ortstyp.
+ * Returns the marker icon for a place type.
  *
- * Symbole werden bei Bedarf erstellt und im internen Cache vorgehalten.
+ * Icons are created on demand and held in the internal cache.
  *
- * @param placeType Der Ortstyp, für den ein Marker benötigt wird
- * @return Die BitmapDescriptor des entsprechenden Markersymbols
+ * @param placeType The place type for which a marker is needed
+ * @return The BitmapDescriptor of the corresponding marker icon
  */
 private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
     return markerCache.getOrPut(placeType) {
@@ -729,9 +728,9 @@ private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
 }
 
 /**
- * Farbzuordnung pro Ortstyp für die Markersymbole.
+ * Color mapping per place type for marker symbols.
  *
- * @return ARGB-Farbwert als Int für den jeweiligen Ortstyp
+ * @return ARGB color value as Int for the respective place type
  */
 private val PlaceType.darkerColor: Int
     get() = when (this) {
@@ -747,16 +746,16 @@ private val PlaceType.darkerColor: Int
     }
 
 /**
- * Karte zur Anzeige eines Sicherheitsberichts in der Berichtsliste.
+ * Card for displaying a safety report in the report list.
  *
- * Enthält Titel, Autor, Datum, Vote-Buttons (Upvote/Downvote),
- * "Auf Karte"-Button und "Details"-Button.
+ * Contains title, author, date, vote buttons (upvote/downvote),
+ * "On map" button and "Details" button.
  *
- * @param report Der anzuzeigende Bericht
- * @param userVote Stimme des aktuellen Nutzers (true = Upvote, false = Downvote, null = keine)
- * @param onVote Callback beim Vote-Klick (true = Upvote, false = Downvote)
- * @param isSelected true, wenn der Bericht auf der Karte markiert ist
- * @param onToggleSelect Callback zum Umschalten der Kartenmarkierung
+ * @param report The report to display
+ * @param userVote Current user's vote (true = upvote, false = downvote, null = none)
+ * @param onVote Callback on vote click (true = upvote, false = downvote)
+ * @param isSelected true if the report is marked on the map
+ * @param onToggleSelect Callback to toggle the map marker
  */
 @Composable
 private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) -> Unit, isSelected: Boolean, onToggleSelect: () -> Unit) {
@@ -852,11 +851,11 @@ private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) 
 }
 
 /**
- * Sternanzeige (1–5) für eine Bewertungskategorie.
+ * Star display (1–5) for a rating category.
  *
- * Gelbe gefüllte Sterne für erreichte Punkte, graue Umrisse für den Rest.
+ * Yellow filled stars for achieved points, grey outlines for the rest.
  *
- * @param rating Die erreichte Punktzahl (1–5)
+ * @param rating The achieved score (1–5)
  */
 @Composable
 private fun StarRating(rating: Int) {
@@ -876,15 +875,15 @@ private fun StarRating(rating: Int) {
 }
 
 /**
- * Detail-Dialog für einen Bericht mit vollständigen Informationen.
+ * Detail dialog for a report with complete information.
  *
- * Zeigt Titel, Autor, Datum, Beschreibung, Vote-Buttons und
- * Kategoriebewertungen als Sternanzeige.
+ * Shows title, author, date, description, vote buttons, and
+ * category ratings as star display.
  *
- * @param report Der anzuzeigende Bericht
- * @param userVote Stimme des aktuellen Nutzers (true = Upvote, false = Downvote, null = keine)
- * @param onVote Callback beim Vote-Klick
- * @param onDismiss Callback zum Schließen des Dialogs
+ * @param report The report to display
+ * @param userVote Current user's vote (true = upvote, false = downvote, null = none)
+ * @param onVote Callback on vote click
+ * @param onDismiss Callback to close the dialog
  */
 @Composable
 private fun ReportDetailsDialog(
