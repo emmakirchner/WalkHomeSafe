@@ -2,10 +2,8 @@ package com.example.walkhomesafe.presentation.screens.report
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +15,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -44,6 +44,7 @@ fun ReportsByUserScreen(
 ) {
     var editReport by remember { mutableStateOf<ReportDto?>(null) }
     val uiState by reportViewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     if (editReport != null) {
         val report = editReport ?: return
@@ -65,7 +66,14 @@ fun ReportsByUserScreen(
         reportViewModel.loadReportsByUser()
     }
 
+    LaunchedEffect(uiState.showError) {
+        uiState.showError?.let {
+            snackbarHostState.showSnackbar(it)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState, Modifier.padding(bottom = 0.dp)) },
         topBar = {
             TopAppBar(
                 title = { Text("Meine Reporte") },
@@ -110,7 +118,7 @@ fun ReportsByUserScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 16.dp),
+                            .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(uiState.reportsByUser, key = { it.id }) { report ->
@@ -128,7 +136,6 @@ fun ReportsByUserScreen(
                                 )
                             }
                         }
-                        item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
                 }
             }

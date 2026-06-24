@@ -120,10 +120,15 @@ class ReportViewModel() : ViewModel() {
 
     fun deleteReport(id: Int) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(showError = null)
             val success = ReportService.delete(id)
             if (success) {
                 _uiState.value = _uiState.value.copy(
                     reportsByUser = _uiState.value.reportsByUser.filter { it.id != id }
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    showError = "Report konnte nicht gelöscht werden"
                 )
             }
         }
