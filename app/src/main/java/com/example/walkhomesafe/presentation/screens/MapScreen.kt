@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.model.NearbyPlace
 import com.example.walkhomesafe.model.PlaceType
-import com.example.walkhomesafe.presentation.screens.report.CreateScreen
+import com.example.walkhomesafe.presentation.screens.report.CreateOrEditScreen
 import com.example.walkhomesafe.viewmodel.MapUiState
 import com.example.walkhomesafe.viewmodel.MapViewModel
 import android.util.Log
@@ -86,7 +86,7 @@ fun MapScreen(
         val loc = mapViewModel.selectedLocation.collectAsState().value
         val addr = mapViewModel.selectedAddress.collectAsState().value
         if (loc != null) {
-            CreateScreen(
+            CreateOrEditScreen(
                 latitude = loc.latitude,
                 longitude = loc.longitude,
                 address = addr,
