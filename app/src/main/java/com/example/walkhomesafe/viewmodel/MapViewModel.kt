@@ -72,6 +72,9 @@ class MapViewModel(
     private val _showClosedPlaces = MutableStateFlow(false)
     val showClosedPlaces: StateFlow<Boolean> = _showClosedPlaces.asStateFlow()
 
+    private val _showHeatmap = MutableStateFlow(true)
+    val showHeatmap: StateFlow<Boolean> = _showHeatmap.asStateFlow()
+
     private val _nearbyPlaces = MutableStateFlow<List<NearbyPlace>>(emptyList())
     val nearbyPlaces: StateFlow<List<NearbyPlace>> = _nearbyPlaces.asStateFlow()
 
@@ -230,6 +233,10 @@ class MapViewModel(
         val newValue = !_showClosedPlaces.value
         _showClosedPlaces.value = newValue
         currentLocation?.let { fetchNearbyPlaces(it, includeClosed = newValue) }
+    }
+
+    fun toggleHeatmap() {
+        _showHeatmap.value = !_showHeatmap.value
     }
 
     private fun tryFetchCurrentLocation(fallbackToDefault: Boolean): Boolean {

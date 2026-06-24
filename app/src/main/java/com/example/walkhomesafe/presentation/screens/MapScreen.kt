@@ -29,8 +29,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -176,6 +178,7 @@ fun MapScreen(
     val userVotes by mapViewModel.userVotes.collectAsState()
     val isLoadingReports by mapViewModel.isLoadingReports.collectAsState()
     val heatmapReports by mapViewModel.heatmapReports.collectAsState()
+    val showHeatmap by mapViewModel.showHeatmap.collectAsState()
 
     val mapStyleOptions = remember(context) {
         try {
@@ -254,18 +257,20 @@ fun MapScreen(
                 }
             }
 
-            val overlayRef = remember { mutableListOf<TileOverlay>() }
+            val overlayRef = remember { mutableStateOf<TileOverlay?>(null) }
 
             MapEffect(heatmapReports) { map ->
-                overlayRef.forEach { it.remove() }
-                overlayRef.clear()
-
+                overlayRef.value?.remove()
                 if (heatmapReports.isNotEmpty()) {
                     val provider = DangerHeatmapTileProvider(reports = heatmapReports)
-                    map.addTileOverlay(TileOverlayOptions().tileProvider(provider))?.let {
-                        overlayRef.add(it)
-                    }
+                    overlayRef.value = map.addTileOverlay(TileOverlayOptions().tileProvider(provider))
+                } else {
+                    overlayRef.value = null
                 }
+            }
+
+            LaunchedEffect(showHeatmap) {
+                overlayRef.value?.isVisible = showHeatmap
             }
         }
 
@@ -385,6 +390,11 @@ fun MapScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 10.dp, bottom = 100.dp)
         ) {
+            HeatmapToggleButton(
+                isEnabled = showHeatmap,
+                onClick = { mapViewModel.toggleHeatmap() }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             PublicLocationsFilterButton(
                 isEnabled = showPublicLocations,
                 isDebugMode = showClosedPlaces,
@@ -507,6 +517,28 @@ fun MapScreen(
         }
     }
 }
+}
+
+@Composable
+private fun HeatmapToggleButton(
+    isEnabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .size(40.dp)
+            .clickable(onClick = onClick),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shadowElevation = 6.dp
+    ) {
+        Icon(
+            imageVector = if (isEnabled) Icons.Filled.Layers else Icons.Outlined.Layers,
+            contentDescription = if (isEnabled) "Heatmap ausblenden" else "Heatmap anzeigen"
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
