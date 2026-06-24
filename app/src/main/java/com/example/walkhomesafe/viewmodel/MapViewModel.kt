@@ -17,6 +17,8 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.example.walkhomesafe.model.Report
+import com.example.walkhomesafe.model.Severity
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
@@ -84,6 +86,9 @@ class MapViewModel(
 
     private val _userVotes = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
     val userVotes: StateFlow<Map<Int, Boolean>> = _userVotes.asStateFlow()
+
+    private val _heatmapReports = MutableStateFlow<List<Report>>(emptyList())
+    val heatmapReports: StateFlow<List<Report>> = _heatmapReports.asStateFlow()
 
     private var currentLocation: LatLng? = null
     private var placesFetchJob: Job? = null
@@ -339,13 +344,51 @@ class MapViewModel(
                     )
                     results[0] <= 800f
                 }
+                updateHeatmapReports(_reports.value)
                 val votes = ReportVoteService.getMyVotes()
                 _userVotes.value = votes.associate { it.reportId to it.isUpvote }
             } catch (e: Exception) {
                 _reports.value = emptyList()
+                updateHeatmapReports(emptyList())
             } finally {
                 _isLoadingReports.value = false
             }
+        }
+    }
+
+    private fun updateHeatmapReports(dtos: List<ReportDto>) {
+        _heatmapReports.value = dtos.mapNotNull { dto ->
+            val cats = dto.ratingCategories
+            if (cats.isNullOrEmpty()) return@mapNotNull null
+
+            val numCategories = cats.size
+            val totalStars = cats.sumOf { it.rating }
+            val maxStars = numCategories * 5
+            val threshold = 9
+            val minStars = numCategories
+
+            val isPositive = totalStars > threshold
+            val weight = if (isPositive) {
+                (totalStars - threshold).toDouble() / (maxStars - threshold)
+            } else {
+                (threshold - totalStars).toDouble() / (threshold - minStars)
+            }.coerceIn(0.0, 1.0)
+
+            val severity = when {
+                weight >= 0.75 -> Severity.CRITICAL
+                weight >= 0.50 -> Severity.HIGH
+                weight >= 0.25 -> Severity.MEDIUM
+                else -> Severity.LOW
+            }
+
+            Report(
+                id = dto.id.toString(),
+                title = dto.title,
+                latitude = dto.latitude,
+                longitude = dto.longitude,
+                severity = severity,
+                isPositive = isPositive
+            )
         }
     }
 

@@ -68,12 +68,16 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.maps.model.TileOverlay
+import com.google.android.gms.maps.model.TileOverlayOptions
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.example.walkhomesafe.services.DangerHeatmapTileProvider
 import com.google.android.gms.maps.model.LatLng
 import com.example.walkhomesafe.R
 import com.example.walkhomesafe.api.ReportDto
@@ -171,6 +175,7 @@ fun MapScreen(
     val reports by mapViewModel.reports.collectAsState()
     val userVotes by mapViewModel.userVotes.collectAsState()
     val isLoadingReports by mapViewModel.isLoadingReports.collectAsState()
+    val heatmapReports by mapViewModel.heatmapReports.collectAsState()
 
     val mapStyleOptions = remember(context) {
         try {
@@ -245,6 +250,20 @@ fun MapScreen(
                             title = r.title,
                             icon = selectedReportMarker
                         )
+                    }
+                }
+            }
+
+            val overlayRef = remember { mutableListOf<TileOverlay>() }
+
+            MapEffect(heatmapReports) { map ->
+                overlayRef.forEach { it.remove() }
+                overlayRef.clear()
+
+                if (heatmapReports.isNotEmpty()) {
+                    val provider = DangerHeatmapTileProvider(reports = heatmapReports)
+                    map.addTileOverlay(TileOverlayOptions().tileProvider(provider))?.let {
+                        overlayRef.add(it)
                     }
                 }
             }
