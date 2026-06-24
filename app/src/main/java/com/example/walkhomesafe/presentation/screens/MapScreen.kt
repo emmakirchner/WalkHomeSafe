@@ -105,6 +105,15 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.material.icons.filled.Info
 import kotlinx.coroutines.delay
 
+/**
+ * Hauptbildschirm der Kartenansicht.
+ *
+ * Enthält die Google-Karte mit Standortverfolgung, Suchleiste,
+ * Berichtsliste, Heatmap-Überlagerung und Filter-Buttons.
+ *
+ * @param mapViewModel ViewModel für Kartenlogik, Standort und Berichte
+ * @param permissionsViewModel ViewModel für Laufzeitberechtigungen
+ */
 @Composable
 fun MapScreen(
     mapViewModel: MapViewModel = viewModel(),
@@ -114,6 +123,7 @@ fun MapScreen(
     var collapsed by remember { mutableStateOf(false) }
     var visuallyCollapsed by remember { mutableStateOf(false) }
     var selectedReportId by remember { mutableStateOf<Int?>(null) }
+    /** Verzögert das visuelle Einklappen um 600ms für eine flüssige Animation des Bericht-Panels. */
     LaunchedEffect(collapsed) {
         if (collapsed) {
             delay(600)
@@ -122,6 +132,7 @@ fun MapScreen(
             visuallyCollapsed = false
         }
     }
+    /** Animiert die Pfeilrotation beim Einklappen/Ausklappen des Bericht-Panels (600ms). */
     val arrowRotation by animateFloatAsState(
         targetValue = if (collapsed) -90f else 0f,
         animationSpec = tween(durationMillis = 600),
@@ -155,6 +166,7 @@ fun MapScreen(
     val selectedLocation by mapViewModel.selectedLocation.collectAsState()
     val selectedAddress by mapViewModel.selectedAddress.collectAsState()
 
+    /** Fordert Standortberechtigung beim Start an und initiiert Standortermittlung. */
     LaunchedEffect(Unit) {
         permissionsViewModel.requestAccessFineLocation {
             mapViewModel.fetchLocation()
@@ -167,6 +179,7 @@ fun MapScreen(
         position = savedCameraPosition
     }
 
+    /** Speichert die Kameraposition bei jeder Bewegung im ViewModel. */
     LaunchedEffect(cameraPositionState.position) {
         mapViewModel.updateSavedCameraPosition(cameraPositionState.position)
     }
@@ -194,6 +207,7 @@ fun MapScreen(
 
     var wasGpsOff by remember { mutableStateOf(!isGpsEnabled) }
 
+    /** Überwacht den GPS-Status alle 3s; fordert Standortaktualisierung bei Wiederherstellung an. */
     LaunchedEffect(Unit) {
         while (true) {
             val current = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
@@ -259,6 +273,7 @@ fun MapScreen(
 
             val overlayRef = remember { mutableStateOf<TileOverlay?>(null) }
 
+            /** Erzeugt oder entfernt die Heatmap-Kachelüberlagerung basierend auf aktuellen Berichtsdaten. */
             MapEffect(heatmapReports) { map ->
                 overlayRef.value?.remove()
                 if (heatmapReports.isNotEmpty()) {
@@ -269,6 +284,7 @@ fun MapScreen(
                 }
             }
 
+            /** Schaltet die Sichtbarkeit der Heatmap-Überlagerung um, ohne die Kacheln neu aufzubauen. */
             LaunchedEffect(showHeatmap) {
                 overlayRef.value?.isVisible = showHeatmap
             }
@@ -282,6 +298,7 @@ fun MapScreen(
                 )
             }
             is MapUiState.Location -> {
+                /** Bewegt die Kamera beim ersten Standortfund zur Nutzerposition (Zoom 15, einmalig). */
                 LaunchedEffect(state.latLng, autoFocusTrigger) {
                     if (!mapViewModel.hasAnimated) {
                         cameraPositionState.animate(
@@ -519,6 +536,15 @@ fun MapScreen(
 }
 }
 
+/**
+ * Kreisrunder Button zum Ein-/Ausblenden der Heatmap-Überlagerung.
+ *
+ * Zeigt ein Layers-Symbol (ausgefüllt = sichtbar, umrissen = ausgeblendet).
+ *
+ * @param isEnabled true, wenn die Heatmap aktuell sichtbar ist
+ * @param onClick Callback beim Klick auf den Button
+ * @param modifier Modifier für Positionierung und Layout
+ */
 @Composable
 private fun HeatmapToggleButton(
     isEnabled: Boolean,
@@ -541,6 +567,18 @@ private fun HeatmapToggleButton(
     }
 }
 
+/**
+ * Kreisrunder Button zum Filtern öffentlicher Orte auf der Karte.
+ *
+ * Einfach Klick schaltet offene Orte ein/aus, langer Klick schaltet
+ * den Debug-Modus für geschlossene Orte um.
+ *
+ * @param isEnabled true, wenn der Filter aktiv ist
+ * @param isDebugMode true, wenn der Debug-Modus aktiv ist
+ * @param onClick Callback beim einfachen Klick
+ * @param onLongClick Callback beim langen Klick
+ * @param modifier Modifier für Positionierung und Layout
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PublicLocationsFilterButton(
@@ -573,6 +611,14 @@ private fun PublicLocationsFilterButton(
     }
 }
 
+/**
+ * Markiert einen öffentlichen Ort auf der Karte.
+ *
+ * Das Symbol wird basierend auf Ortstyp und Öffnungsstatus gewählt:
+ * geöffnet = farbig, geschlossen = grau, unbekannt = hellgrau.
+ *
+ * @param place Der anzuzeigende Ort mit Position, Typ und Öffnungszeiten
+ */
 @Composable
 private fun PlaceMarker(
     place: NearbyPlace
@@ -603,6 +649,7 @@ private fun PlaceMarker(
     )
 }
 
+/** Grauer Marker für geschlossene Orte, als Bitmap einmalig erzeugt und zwischengespeichert. */
 private val greyMarker: BitmapDescriptor by lazy {
     val size = 40
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -615,6 +662,7 @@ private val greyMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
+/** Hellgrauer Marker für Orte mit unbekanntem Öffnungsstatus, als Bitmap zwischengespeichert. */
 private val unknownMarker: BitmapDescriptor by lazy {
     val size = 40
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -627,6 +675,7 @@ private val unknownMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
+/** Roter Marker mit "!" für den auf der Karte ausgewählten Bericht (60px, besser sichtbar). */
 private val selectedReportMarker: BitmapDescriptor by lazy {
     val size = 60
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -655,8 +704,17 @@ private val selectedReportMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
+/** Zwischenspeicher für orts typspezifische Marker-Bitmaps, vermeidet Neuerstellung. */
 private val markerCache = mutableMapOf<PlaceType, BitmapDescriptor>()
 
+/**
+ * Liefert das Markersymbol für einen Ortstyp.
+ *
+ * Symbole werden bei Bedarf erstellt und im internen Cache vorgehalten.
+ *
+ * @param placeType Der Ortstyp, für den ein Marker benötigt wird
+ * @return Die BitmapDescriptor des entsprechenden Markersymbols
+ */
 private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
     return markerCache.getOrPut(placeType) {
         val size = 40
@@ -671,6 +729,11 @@ private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
     }
 }
 
+/**
+ * Farbzuordnung pro Ortstyp für die Markersymbole.
+ *
+ * @return ARGB-Farbwert als Int für den jeweiligen Ortstyp
+ */
 private val PlaceType.darkerColor: Int
     get() = when (this) {
         PlaceType.RESTAURANT -> android.graphics.Color.rgb(200, 80, 0)
@@ -684,6 +747,18 @@ private val PlaceType.darkerColor: Int
         PlaceType.GAS_STATION -> android.graphics.Color.rgb(100, 0, 180)
     }
 
+/**
+ * Karte zur Anzeige eines Sicherheitsberichts in der Berichtsliste.
+ *
+ * Enthält Titel, Autor, Datum, Vote-Buttons (Upvote/Downvote),
+ * "Auf Karte"-Button und "Details"-Button.
+ *
+ * @param report Der anzuzeigende Bericht
+ * @param userVote Stimme des aktuellen Nutzers (true = Upvote, false = Downvote, null = keine)
+ * @param onVote Callback beim Vote-Klick (true = Upvote, false = Downvote)
+ * @param isSelected true, wenn der Bericht auf der Karte markiert ist
+ * @param onToggleSelect Callback zum Umschalten der Kartenmarkierung
+ */
 @Composable
 private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) -> Unit, isSelected: Boolean, onToggleSelect: () -> Unit) {
     var showDetails by remember { mutableStateOf(false) }
@@ -777,6 +852,13 @@ private fun ReportCard(report: ReportDto, userVote: Boolean?, onVote: (Boolean) 
     }
 }
 
+/**
+ * Sternanzeige (1–5) für eine Bewertungskategorie.
+ *
+ * Gelbe gefüllte Sterne für erreichte Punkte, graue Umrisse für den Rest.
+ *
+ * @param rating Die erreichte Punktzahl (1–5)
+ */
 @Composable
 private fun StarRating(rating: Int) {
     Row {
@@ -794,6 +876,17 @@ private fun StarRating(rating: Int) {
     }
 }
 
+/**
+ * Detail-Dialog für einen Bericht mit vollständigen Informationen.
+ *
+ * Zeigt Titel, Autor, Datum, Beschreibung, Vote-Buttons und
+ * Kategoriebewertungen als Sternanzeige.
+ *
+ * @param report Der anzuzeigende Bericht
+ * @param userVote Stimme des aktuellen Nutzers (true = Upvote, false = Downvote, null = keine)
+ * @param onVote Callback beim Vote-Klick
+ * @param onDismiss Callback zum Schließen des Dialogs
+ */
 @Composable
 private fun ReportDetailsDialog(
     report: ReportDto,

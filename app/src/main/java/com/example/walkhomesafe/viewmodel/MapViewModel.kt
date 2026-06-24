@@ -33,17 +33,52 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
+/**
+ * Datenklasse für einen Autocomplete-Vorschlag der Google Places API.
+ *
+ * @property placeId Eindeutige ID des Ortes bei Google Places
+ * @property text Anzeigetext des Vorschlags
+ */
 data class Suggestion(
     val placeId: String,
     val text: String
 )
 
+/**
+ * Versiegelte Oberfläche für die UI-Zustände des Kartenbildschirms.
+ *
+ * @property Loading Wird während der Standortermittlung angezeigt
+ * @property Location Standort erfolgreich ermittelt, enthält [LatLng]
+ * @property Error Fehler bei der Standortermittlung mit Fehlermeldung
+ */
 sealed interface MapUiState {
     data object Loading : MapUiState
     data class Location(val latLng: LatLng) : MapUiState
     data class Error(val message: String) : MapUiState
 }
 
+/**
+ * ViewModel für den Kartenbildschirm.
+ *
+ * Verwaltet Standort, Kameraposition, Berichte, Orte, Suche und Heatmap-Überlagerung.
+ *
+ * @property uiState Aktueller UI-Zustand
+ * @property savedCameraPosition Gespeicherte Kameraposition
+ * @property autoFocusTrigger Auslöser für automatische Kamerafokussierung
+ * @property searchQuery Aktuelle Suchanfrage
+ * @property suggestions Autocomplete-Vorschläge
+ * @property selectedLocation Vom Nutzer ausgewählte Position
+ * @property selectedAddress Adresse der ausgewählten Position
+ * @property showPublicLocations Ob öffentliche Orte angezeigt werden
+ * @property showClosedPlaces Ob geschlossene Orte im Debug-Modus einbezogen werden
+ * @property showHeatmap Ob die Heatmap-Überlagerung sichtbar ist
+ * @property nearbyPlaces Nahegelegene öffentliche Orte
+ * @property isLoadingPlaces Ladezustand der Orte
+ * @property reports Sicherheitsberichte
+ * @property isLoadingReports Ladezustand der Berichte
+ * @property userVotes Voting-Stand des Nutzers (Report-ID → Boolean)
+ * @property heatmapReports Aufbereitete Berichte für die Heatmap
+ */
 class MapViewModel(
     application: Application
 ) : AndroidViewModel(application) {
@@ -106,6 +141,7 @@ class MapViewModel(
     val selectedLocation: StateFlow<LatLng?> = _selectedLocation.asStateFlow()
     val selectedAddress: StateFlow<String> = _selectedAddress.asStateFlow()
 
+    /** Startet die einmalige Standortermittlung beim ersten Aufruf. */
     fun fetchLocation() {
         if (hasFetchedOnce) return
         hasFetchedOnce = true
@@ -118,10 +154,14 @@ class MapViewModel(
         }
     }
 
+    /**
+     * @param cameraPosition Aktuelle Position der Kartenkamera
+     */
     fun updateSavedCameraPosition(cameraPosition: CameraPosition) {
         _savedCameraPosition.value = cameraPosition
     }
 
+    /** Setzt Kamera-Animation zurück und fordert eine Standortaktualisierung an. */
     fun requestLocationRefresh() {
         hasAnimated = false
         viewModelScope.launch {
@@ -129,6 +169,10 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Sucht Orte per Google Places Autocomplete.
+     * @param query Die Suchanfrage des Nutzers
+     */
     fun searchLocation(query: String) {
         _searchQuery.value = query
         if (query.isBlank()) {
@@ -150,6 +194,10 @@ class MapViewModel(
             }
     }
 
+    /**
+     * Wählt einen Autocomplete-Vorschlag aus und fokussiert die Karte darauf.
+     * @param suggestion Der ausgewählte Vorschlag
+     */
     fun selectSuggestion(suggestion: Suggestion) {
         val fields = listOf(
             Place.Field.ID,
@@ -170,6 +218,11 @@ class MapViewModel(
             }
     }
 
+    /**
+     * Setzt eine Position manuell und aktualisiert Suchfeld und Auswahl.
+     * @param latLng Koordinaten der Position
+     * @param address Address-Text für die Anzeige
+     */
     fun selectLocation(latLng: LatLng, address: String) {
         _selectedLocation.value = latLng
         _selectedAddress.value = address
@@ -177,6 +230,7 @@ class MapViewModel(
         _suggestions.value = emptyList()
     }
 
+    /** Setzt die manuelle Auswahl zurück und leert das Suchfeld. */
     fun clearSelection() {
         _selectedLocation.value = null
         _selectedAddress.value = ""
@@ -184,10 +238,16 @@ class MapViewModel(
         _suggestions.value = emptyList()
     }
 
+    /** Löst eine erneute Berichtsabfrage für den aktuellen Standort aus. */
     fun refreshReports() {
         currentLocation?.let { fetchReports(it) }
     }
 
+    /**
+     * Stimmt für einen Bericht ab (Upvote/Downvote) oder hebt die Stimme auf.
+     * @param reportId ID des Berichts
+     * @param isUpvote true = Upvote, false = Downvote
+     */
     fun voteOnReport(reportId: Int, isUpvote: Boolean) {
         viewModelScope.launch {
             val currentVote = _userVotes.value[reportId]
@@ -220,6 +280,7 @@ class MapViewModel(
         }
     }
 
+    /** Schaltet die Anzeige öffentlicher Orte ein/aus. */
     fun togglePublicLocationsFilter() {
         val newValue = !_showPublicLocations.value
         _showPublicLocations.value = newValue
@@ -229,16 +290,26 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Schaltet den Debug-Modus für geschlossene Orte ein/aus.
+     * Hat nur Wirkung, wenn showPublicLocations aktiv ist.
+     */
     fun toggleClosedPlacesFilter() {
         val newValue = !_showClosedPlaces.value
         _showClosedPlaces.value = newValue
         currentLocation?.let { fetchNearbyPlaces(it, includeClosed = newValue) }
     }
 
+    /** Schaltet die Sichtbarkeit der Heatmap-Überlagerung ein/aus. */
     fun toggleHeatmap() {
         _showHeatmap.value = !_showHeatmap.value
     }
 
+    /**
+     * Versucht den aktuellen Standort zu ermitteln.
+     * @param fallbackToDefault Bei true wird auf Standardkoordinaten zurückgefallen
+     * @return true, wenn der Vorgang gestartet werden konnte
+     */
     private fun tryFetchCurrentLocation(fallbackToDefault: Boolean): Boolean {
         return try {
             fusedLocationClient.getCurrentLocation(
@@ -258,6 +329,11 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Verarbeitet das Ergebnis der Standortermittlung.
+     * @param location Gefundener Standort oder null
+     * @param fallbackToDefault Auf Standardkoordinaten zurückfallen wenn kein Standort
+     */
     private fun handleLocationResult(location: Location?, fallbackToDefault: Boolean) {
         if (location != null) {
             val latLng = LatLng(location.latitude, location.longitude)
@@ -288,6 +364,11 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Wird bei jeder Standortaktualisierung aufgerufen.
+     * Startet Abfragen für Orte und Berichte bei signifikanter Positionsänderung.
+     * @param latLng Neuer Standort
+     */
     private fun onLocationUpdated(latLng: LatLng) {
         val isFirstLocation = currentLocation == null
         val shouldFetchPlaces = _showPublicLocations.value && hasLocationChangedSignificantly(currentLocation, latLng)
@@ -305,6 +386,12 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Prüft, ob sich der Standort um mehr als 100m geändert hat.
+     * @param oldLocation Vorheriger Standort (null = signifikante Änderung)
+     * @param newLocation Neuer Standort
+     * @return true bei signifikanter Änderung
+     */
     private fun hasLocationChangedSignificantly(oldLocation: LatLng?, newLocation: LatLng): Boolean {
         if (oldLocation == null) return true
 
@@ -317,6 +404,11 @@ class MapViewModel(
         return results[0] > 100.0f
     }
 
+    /**
+     * Lädt öffentliche Orte im Umkreis von 800m.
+     * @param location Mittelpunkt der Suche
+     * @param includeClosed Ob geschlossene Orte einbezogen werden
+     */
     private fun fetchNearbyPlaces(location: LatLng, includeClosed: Boolean = false) {
         placesFetchJob?.cancel()
 
@@ -337,6 +429,10 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Lädt Sicherheitsberichte aus dem Umkreis von 800m und aktualisiert Votes und Heatmap.
+     * @param location Mittelpunkt der Suche
+     */
     private fun fetchReports(location: LatLng) {
         viewModelScope.launch {
             _isLoadingReports.value = true
@@ -363,6 +459,11 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Wandelt Berichte in das Heatmap-Format um.
+     * Berechnet Gewichtung, Polarität (positiv/negativ) und Schweregrad (Severity).
+     * @param dtos Rohdaten der Berichte aus der API
+     */
     private fun updateHeatmapReports(dtos: List<ReportDto>) {
         _heatmapReports.value = dtos.mapNotNull { dto ->
             val cats = dto.ratingCategories
@@ -399,6 +500,7 @@ class MapViewModel(
         }
     }
 
+    /** Startet die periodische Berichtsaktualisierung alle 60 Sekunden. */
     private fun startAutoRefresh() {
         if (autoRefreshJob?.isActive == true) return
         autoRefreshJob = viewModelScope.launch {
@@ -409,16 +511,25 @@ class MapViewModel(
         }
     }
 
+    /** Stoppt die periodische Aktualisierung beim Zerstören des ViewModels. */
     override fun onCleared() {
         super.onCleared()
         autoRefreshJob?.cancel()
     }
 
+    /**
+     * Aktualisiert UI-Zustand und Kameraposition auf den neuen Standort.
+     * @param latLng Neuer Standort
+     */
     private fun updateUiWithLocation(latLng: LatLng) {
         _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
         _uiState.value = MapUiState.Location(latLng)
     }
 
+    /**
+     * Ermittelt den Standort für SMS-Funktionen (suspend).
+     * @return Standort oder null bei Fehler
+     */
     suspend fun requestLocationForSms(): LatLng? {
         return suspendCancellableCoroutine { cont ->
             try {
@@ -440,6 +551,10 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Fallback für SMS-Standort: liefert den letzten bekannten Standort.
+     * @param cont Continuation für den asynchronen Rückgabewert
+     */
     private fun fetchLastForSms(cont: kotlinx.coroutines.CancellableContinuation<LatLng?>) {
         try {
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
