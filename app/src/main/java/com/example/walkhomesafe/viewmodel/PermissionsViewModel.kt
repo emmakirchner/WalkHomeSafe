@@ -91,6 +91,19 @@ class PermissionsViewModel(
         pendingAction = null
     }
 
+    fun requestPostNotifications(onGranted: () -> Unit) {
+        if (Build.VERSION.SDK_INT < 33 ||
+            hasPermission(Manifest.permission.POST_NOTIFICATIONS)
+        ) {
+            onGranted()
+        } else {
+            pendingAction = onGranted
+            viewModelScope.launch {
+                _permissionRequests.emit(PermissionIntent.Notifications)
+            }
+        }
+    }
+
     fun requestReadContacts(onGranted: () -> Unit) {
         if (hasPermission(Manifest.permission.READ_CONTACTS)) {
             onGranted()
