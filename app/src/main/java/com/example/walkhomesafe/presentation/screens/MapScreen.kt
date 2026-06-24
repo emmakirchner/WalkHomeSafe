@@ -1,9 +1,9 @@
 package com.example.walkhomesafe.presentation.screens
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import androidx.core.graphics.createBitmap
 import android.location.LocationManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -83,10 +83,8 @@ import com.example.walkhomesafe.services.DangerHeatmapTileProvider
 import com.google.android.gms.maps.model.LatLng
 import com.example.walkhomesafe.R
 import com.example.walkhomesafe.api.ReportDto
-import com.example.walkhomesafe.api.ReportRatingDto
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -627,12 +625,13 @@ private fun PlaceMarker(
         MarkerState(position = place.latLng)
     }
 
-    val statusText = when {
-        place.isOpenNow == false -> "Geschlossen"
-        place.closingTime == "24/7" -> "Ge\u00f6ffnet 24/7"
-        place.closingTime != null -> "Ge\u00f6ffnet bis ${place.closingTime} Uhr"
-        place.isOpenNow == true -> "Ge\u00f6ffnet"
-        else -> "Unbekannt"
+    val statusText = when (place.isOpenNow) {
+        false -> "Geschlossen"
+        else -> when (place.closingTime) {
+            "24/7" -> "Ge\u00f6ffnet 24/7"
+            null -> if (place.isOpenNow == true) "Ge\u00f6ffnet" else "Unbekannt"
+            else -> "Ge\u00f6ffnet bis ${place.closingTime} Uhr"
+        }
     }
 
     val snippetText = "${place.placeType.displayName} | $statusText"
@@ -641,9 +640,9 @@ private fun PlaceMarker(
         state = markerState,
         title = place.name,
         snippet = snippetText,
-        icon = when {
-            place.isOpenNow == false -> greyMarker
-            place.isOpenNow == null && place.closingTime == null -> unknownMarker
+        icon = when (place.isOpenNow) {
+            false -> greyMarker
+            null -> if (place.closingTime == null) unknownMarker else getMarkerIconForType(place.placeType)
             else -> getMarkerIconForType(place.placeType)
         }
     )
@@ -652,7 +651,7 @@ private fun PlaceMarker(
 /** Grauer Marker für geschlossene Orte, als Bitmap einmalig erzeugt und zwischengespeichert. */
 private val greyMarker: BitmapDescriptor by lazy {
     val size = 40
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(size, size)
     val canvas = Canvas(bitmap)
     val paint = Paint().apply {
         color = android.graphics.Color.GRAY
@@ -665,7 +664,7 @@ private val greyMarker: BitmapDescriptor by lazy {
 /** Hellgrauer Marker für Orte mit unbekanntem Öffnungsstatus, als Bitmap zwischengespeichert. */
 private val unknownMarker: BitmapDescriptor by lazy {
     val size = 40
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(size, size)
     val canvas = Canvas(bitmap)
     val paint = Paint().apply {
         color = android.graphics.Color.LTGRAY
@@ -678,7 +677,7 @@ private val unknownMarker: BitmapDescriptor by lazy {
 /** Roter Marker mit "!" für den auf der Karte ausgewählten Bericht (60px, besser sichtbar). */
 private val selectedReportMarker: BitmapDescriptor by lazy {
     val size = 60
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(size, size)
     val canvas = Canvas(bitmap)
     val fillPaint = Paint().apply {
         color = android.graphics.Color.WHITE
@@ -718,7 +717,7 @@ private val markerCache = mutableMapOf<PlaceType, BitmapDescriptor>()
 private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
     return markerCache.getOrPut(placeType) {
         val size = 40
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
         val paint = Paint().apply {
             color = placeType.darkerColor
