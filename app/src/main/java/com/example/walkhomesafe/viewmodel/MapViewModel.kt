@@ -2,7 +2,6 @@ package com.example.walkhomesafe.viewmodel
 
 import android.app.Application
 import android.location.Location
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.walkhomesafe.api.ReportDto
@@ -266,13 +265,13 @@ class MapViewModel(
                     if (report.id != reportId) return@map report
                     var up = report.upvoteCount
                     var down = report.downvoteCount
-                    when {
-                        currentVote == true && newVote == null -> { up-- }
-                        currentVote == true && newVote == false -> { up--; down++ }
-                        currentVote == false && newVote == null -> { down-- }
-                        currentVote == false && newVote == true -> { down--; up++ }
-                        currentVote == null && newVote == true -> { up++ }
-                        currentVote == null && newVote == false -> { down++ }
+                    when (currentVote to newVote) {
+                        true to null -> up--
+                        true to false -> { up--; down++ }
+                        false to null -> down--
+                        false to true -> { down--; up++ }
+                        null to true -> up++
+                        null to false -> down++
                     }
                     report.copy(upvoteCount = up, downvoteCount = down)
                 }
@@ -321,7 +320,7 @@ class MapViewModel(
                 handleLocationResult(null, fallbackToDefault = fallbackToDefault)
             }
             true
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             if (fallbackToDefault) {
                 updateUiWithLocation(defaultLocation)
             }
@@ -354,7 +353,7 @@ class MapViewModel(
                         onLocationUpdated(defaultLocation)
                     }
                 }
-            } catch (e: SecurityException) {
+            } catch (_: SecurityException) {
                 if (fallbackToDefault) {
                     updateUiWithLocation(defaultLocation)
                     _autoFocusTrigger.value = System.nanoTime()
@@ -396,7 +395,7 @@ class MapViewModel(
         if (oldLocation == null) return true
 
         val results = FloatArray(1)
-        android.location.Location.distanceBetween(
+        Location.distanceBetween(
             oldLocation.latitude, oldLocation.longitude,
             newLocation.latitude, newLocation.longitude,
             results
@@ -421,7 +420,7 @@ class MapViewModel(
                     includeClosed = includeClosed
                 )
                 _nearbyPlaces.value = result.getOrDefault(emptyList())
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _nearbyPlaces.value = emptyList()
             } finally {
                 _isLoadingPlaces.value = false
@@ -440,7 +439,7 @@ class MapViewModel(
                 val allReports = ReportService.get()
                 _reports.value = allReports.filter { report ->
                     val results = FloatArray(1)
-                    android.location.Location.distanceBetween(
+                    Location.distanceBetween(
                         location.latitude, location.longitude,
                         report.latitude, report.longitude,
                         results
@@ -450,7 +449,7 @@ class MapViewModel(
                 updateHeatmapReports(_reports.value)
                 val votes = ReportVoteService.getMyVotes()
                 _userVotes.value = votes.associate { it.reportId to it.isUpvote }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _reports.value = emptyList()
                 updateHeatmapReports(emptyList())
             } finally {
@@ -469,11 +468,10 @@ class MapViewModel(
             val cats = dto.ratingCategories
             if (cats.isNullOrEmpty()) return@mapNotNull null
 
-            val numCategories = cats.size
             val totalStars = cats.sumOf { it.rating }
-            val maxStars = numCategories * 5
+            val maxStars = cats.size * 5
             val threshold = 9
-            val minStars = numCategories
+            val minStars = cats.size
 
             val isPositive = totalStars > threshold
             val weight = if (isPositive) {
@@ -545,7 +543,7 @@ class MapViewModel(
                 }.addOnFailureListener {
                     fetchLastForSms(cont)
                 }
-            } catch (e: SecurityException) {
+            } catch (_: SecurityException) {
                 cont.resume(null)
             }
         }
@@ -562,7 +560,7 @@ class MapViewModel(
             }.addOnFailureListener {
                 cont.resume(null)
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             cont.resume(null)
         }
     }
