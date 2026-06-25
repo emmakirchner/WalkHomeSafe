@@ -25,9 +25,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../walkhomesafe-release-key.jks")
+            storePassword = "WalkHomeSafe2026"
+            keyAlias = "walkhomesafe"
+            keyPassword = "WalkHomeSafe2026"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
