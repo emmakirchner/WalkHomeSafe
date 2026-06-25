@@ -1,0 +1,27 @@
+$dokka.format:javadoc-v1
+$dokka.linkExtension:html
+$dokka.location:com.example.walkhomesafe.model/PlaceType.Companion///PointingToDeclaration/com/example/walkhomesafe/model/PlaceType.Companion.html
+$dokka.location:com.example.walkhomesafe.services.permissions/PermissionIntent.AccessFineLocation///PointingToDeclaration/com/example/walkhomesafe/services/permissions/PermissionIntent.AccessFineLocation.html
+$dokka.location:com.example.walkhomesafe.services.permissions/PermissionIntent.Notifications///PointingToDeclaration/com/example/walkhomesafe/services/permissions/PermissionIntent.Notifications.html
+$dokka.location:com.example.walkhomesafe.services.permissions/PermissionIntent.ReadContacts///PointingToDeclaration/com/example/walkhomesafe/services/permissions/PermissionIntent.ReadContacts.html
+$dokka.location:com.example.walkhomesafe.services.permissions/PermissionIntent.SendSms///PointingToDeclaration/com/example/walkhomesafe/services/permissions/PermissionIntent.SendSms.html
+$dokka.location:com.example.walkhomesafe.services/WalkHomeTimerReceiver.Companion///PointingToDeclaration/com/example/walkhomesafe/services/WalkHomeTimerReceiver.Companion.html
+$dokka.location:com.example.walkhomesafe.services/WalkHomeTimerState.TimerPhase///PointingToDeclaration/com/example/walkhomesafe/services/WalkHomeTimerState.TimerPhase.html
+$dokka.location:com.example.walkhomesafe.services/WalkHomeTimerState.TimerState///PointingToDeclaration/com/example/walkhomesafe/services/WalkHomeTimerState.TimerState.html
+$dokka.location:com.example.walkhomesafe.viewmodel/MapUiState.Error///PointingToDeclaration/com/example/walkhomesafe/viewmodel/MapUiState.Error.html
+$dokka.location:com.example.walkhomesafe.viewmodel/MapUiState.Loading///PointingToDeclaration/com/example/walkhomesafe/viewmodel/MapUiState.Loading.html
+$dokka.location:com.example.walkhomesafe.viewmodel/MapUiState.Location///PointingToDeclaration/com/example/walkhomesafe/viewmodel/MapUiState.Location.html
+com.example.walkhomesafe
+com.example.walkhomesafe.api
+com.example.walkhomesafe.data
+com.example.walkhomesafe.model
+com.example.walkhomesafe.presentation
+com.example.walkhomesafe.presentation.components
+com.example.walkhomesafe.presentation.components.navigation
+com.example.walkhomesafe.presentation.screens
+com.example.walkhomesafe.presentation.screens.report
+com.example.walkhomesafe.presentation.widget
+com.example.walkhomesafe.services
+com.example.walkhomesafe.services.permissions
+com.example.walkhomesafe.ui.theme
+com.example.walkhomesafe.viewmodel

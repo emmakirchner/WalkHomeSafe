@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>MapViewModel</title>
+    <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">
+        <script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js", "js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+      if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      } else {
+        const savedDarkMode = JSON.parse(storage)
+        if (savedDarkMode === true) {
+          document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+      }
+    </script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/safe-local-storage_blocking.js"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer="defer"></script>
+<link href="../../../images/logo-icon.webp">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+</head>
+<body>
+<div class="root">
+    <header class="navigation theme-dark" id="navigation-wrapper" role="banner">
+            <a class="library-name--link" href="../../../index.html" tabindex="1">
+                    WalkHomeSafe
+            </a>
+        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle"
+                type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+        </div>
+        <div class="navigation-controls">
+        <ul class="filter-section filter-section_loading" id="filter-section" aria-label="Target filter">
+                <button class="platform-tag platform-selector jvm-like" data-active="" aria-pressed="true"
+                        data-filter=":app/release">release</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox"
+                        data-role="dropdown-toggle"
+                        aria-controls="platform-tags-listbox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-label="Toggle source sets"
+                ></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox" aria-label="Target filter">
+                    <div class="dropdown--header"><span>Target filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close target filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":app/release"
+                                       data-filter=":app/release"/>
+                                <span class="checkbox--icon"></span>
+                                release
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </ul>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button"
+                    type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </header>
+    <div id="container">
+        <nav id="leftColumn" class="sidebar" data-item-type="SECTION" data-item-config='{"defaultSize": 280, "minSize": 200, "maxSize": 400}'>
+            <a class="toc--skip-link" href="#main">Skip to content</a>
+            <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list"
+                    data-role="dropdown-listbox" aria-label="Table of contents">
+                    <div class="dropdown--header">
+                            <span>
+                                    WalkHomeSafe
+                            </span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                    <div class="sidebar--inner" id="sideMenu"></div>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </nav>
+        <div id="resizer" class="resizer" data-item-type="BAR"></div>
+        <div id="main" data-item-type="SECTION" role="main">
+<div class="main-content" data-page-type="classlike" id="content" pageIds="WalkHomeSafe::com.example.walkhomesafe.viewmodel/MapViewModel///PointingToDeclaration//-865142711">
+  <div class="breadcrumbs"><a href="../../../index.html">WalkHomeSafe</a><span class="delimiter">/</span><a href="../index.html">com.example.walkhomesafe.viewmodel</a><span class="delimiter">/</span><span class="current">MapViewModel</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>Map</span><wbr></wbr><span>View</span><wbr></wbr><span><span>Model</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">class </span><a href="index.html">MapViewModel</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">application<span class="token operator">: </span><a href="https://developer.android.com/reference/kotlin/android/app/Application.html">Application</a></span></span><span class="token punctuation">)</span> : <a href="https://developer.android.com/reference/kotlin/androidx/lifecycle/AndroidViewModel.html">AndroidViewModel</a></div><p class="paragraph">ViewModel for the map screen.</p><p class="paragraph">Manages location, camera position, reports, places, search, and heatmap overlay.</p></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="CONSTRUCTOR">
+        <h2 class="tableheader">Constructors</h2>
+        <div class="table"><a data-name="-2138890467%2FConstructors%2F-865142711" anchor-label="MapViewModel" id="-2138890467%2FConstructors%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-togglable="CONSTRUCTOR" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="-map-view-model.html"><span>Map</span><wbr></wbr><span>View</span><wbr></wbr><span><span>Model</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2138890467%2FConstructors%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">application<span class="token operator">: </span><a href="https://developer.android.com/reference/kotlin/android/app/Application.html">Application</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="PROPERTY">
+        <h2 class="tableheader">Properties</h2>
+        <div class="table"><a data-name="787831706%2FProperties%2F-865142711" anchor-label="autoFocusTrigger" id="787831706%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="auto-focus-trigger.html"><span>auto</span><wbr></wbr><span>Focus</span><wbr></wbr><span><span>Trigger</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="787831706%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="auto-focus-trigger.html">autoFocusTrigger</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-long/index.html">Long</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Trigger for automatic camera focusing</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1209910900%2FProperties%2F-865142711" anchor-label="hasAnimated" id="1209910900%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="has-animated.html"><span>has</span><wbr></wbr><span><span>Animated</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1209910900%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">var </span><a href="has-animated.html">hasAnimated</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-274334125%2FProperties%2F-865142711" anchor-label="isLoadingPlaces" id="-274334125%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-loading-places.html"><span>is</span><wbr></wbr><span>Loading</span><wbr></wbr><span><span>Places</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-274334125%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="is-loading-places.html">isLoadingPlaces</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Loading state of places</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1313025468%2FProperties%2F-865142711" anchor-label="isLoadingReports" id="1313025468%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="is-loading-reports.html"><span>is</span><wbr></wbr><span>Loading</span><wbr></wbr><span><span>Reports</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1313025468%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="is-loading-reports.html">isLoadingReports</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Loading state of reports</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1684930174%2FProperties%2F-865142711" anchor-label="nearbyPlaces" id="1684930174%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="nearby-places.html"><span>nearby</span><wbr></wbr><span><span>Places</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1684930174%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="nearby-places.html">nearbyPlaces</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../com.example.walkhomesafe.model/-nearby-place/index.html">NearbyPlace</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Nearby public places</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-135010478%2FProperties%2F-865142711" anchor-label="reports" id="-135010478%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="reports.html"><span><span>reports</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-135010478%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="reports.html">reports</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../../com.example.walkhomesafe.api/-report-dto/index.html">ReportDto</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Safety reports</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-227261956%2FProperties%2F-865142711" anchor-label="savedCameraPosition" id="-227261956%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="saved-camera-position.html"><span>saved</span><wbr></wbr><span>Camera</span><wbr></wbr><span><span>Position</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-227261956%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="saved-camera-position.html">savedCameraPosition</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><span data-unresolved-link="com.google.android.gms.maps.model/CameraPosition///PointingToDeclaration/">CameraPosition</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Saved camera position</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-665244111%2FProperties%2F-865142711" anchor-label="searchQuery" id="-665244111%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="search-query.html"><span>search</span><wbr></wbr><span><span>Query</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-665244111%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="search-query.html">searchQuery</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Current search query</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1571236216%2FProperties%2F-865142711" anchor-label="selectedAddress" id="1571236216%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="selected-address.html"><span>selected</span><wbr></wbr><span><span>Address</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1571236216%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="selected-address.html">selectedAddress</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Address of the selected position</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-342751143%2FProperties%2F-865142711" anchor-label="selectedLocation" id="-342751143%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="selected-location.html"><span>selected</span><wbr></wbr><span><span>Location</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-342751143%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="selected-location.html">selectedLocation</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><span data-unresolved-link="com.google.android.gms.maps.model/LatLng///PointingToDeclaration/">LatLng</span><span class="token operator">?</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Position selected by the user</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1501527308%2FProperties%2F-865142711" anchor-label="showClosedPlaces" id="-1501527308%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="show-closed-places.html"><span>show</span><wbr></wbr><span>Closed</span><wbr></wbr><span><span>Places</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1501527308%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="show-closed-places.html">showClosedPlaces</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Whether closed places are included in debug mode</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-956119710%2FProperties%2F-865142711" anchor-label="showHeatmap" id="-956119710%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="show-heatmap.html"><span>show</span><wbr></wbr><span><span>Heatmap</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-956119710%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="show-heatmap.html">showHeatmap</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Whether the heatmap overlay is visible</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2025937159%2FProperties%2F-865142711" anchor-label="showPublicLocations" id="-2025937159%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="show-public-locations.html"><span>show</span><wbr></wbr><span>Public</span><wbr></wbr><span><span>Locations</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2025937159%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="show-public-locations.html">showPublicLocations</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Whether public places are shown</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-496329182%2FProperties%2F-865142711" anchor-label="suggestions" id="-496329182%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="suggestions.html"><span><span>suggestions</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-496329182%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="suggestions.html">suggestions</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-list/index.html">List</a><span class="token operator">&lt;</span><a href="../-suggestion/index.html">Suggestion</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Autocomplete suggestions</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2023504780%2FProperties%2F-865142711" anchor-label="uiState" id="-2023504780%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="ui-state.html"><span>ui</span><wbr></wbr><span><span>State</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2023504780%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="ui-state.html">uiState</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="../-map-ui-state/index.html">MapUiState</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">Current UI state</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1623147315%2FProperties%2F-865142711" anchor-label="userVotes" id="1623147315%2FProperties%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="user-votes.html"><span>user</span><wbr></wbr><span><span>Votes</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1623147315%2FProperties%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">val </span><a href="user-votes.html">userVotes</a><span class="token operator">: </span><span data-unresolved-link="kotlinx.coroutines.flow/StateFlow///PointingToDeclaration/">StateFlow</span><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.collections/-map/index.html">Map</a><span class="token operator">&lt;</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token punctuation">, </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a><span class="token operator">&gt;</span><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">User's voting state (report ID → Boolean)</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-togglable="FUNCTION">
+        <h2 class="tableheader">Functions</h2>
+        <div class="table"><a data-name="978795377%2FFunctions%2F-865142711" anchor-label="addCloseable" id="978795377%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-report-view-model/index.html#383812252%2FFunctions%2F-865142711"><span>add</span><wbr></wbr><span><span>Closeable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="978795377%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><a href="../-report-view-model/index.html#383812252%2FFunctions%2F-865142711"><span class="token function">addCloseable</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">closeable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-auto-closeable/index.html">AutoCloseable</a></span></span><span class="token punctuation">)</span></div><div class="symbol monospace"><span class="token keyword">fun </span><a href="../-report-view-model/index.html#1722490497%2FFunctions%2F-865142711"><span class="token function">addCloseable</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token punctuation">, </span></span><span class="parameter ">closeable<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-auto-closeable/index.html">AutoCloseable</a></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1595739114%2FFunctions%2F-865142711" anchor-label="clearSelection" id="1595739114%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="clear-selection.html"><span>clear</span><wbr></wbr><span><span>Selection</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1595739114%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="clear-selection.html"><span class="token function">clearSelection</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Resets the manual location selection and clears the search field.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-1163875454%2FFunctions%2F-865142711" anchor-label="fetchLocation" id="-1163875454%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="fetch-location.html"><span>fetch</span><wbr></wbr><span><span>Location</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1163875454%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="fetch-location.html"><span class="token function">fetchLocation</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Starts one-time location determination on first call. Subsequent calls are ignored via hasFetchedOnce flag.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1696759283%2FFunctions%2F-865142711" anchor-label="getApplication" id="1696759283%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-permissions-view-model/index.html#1696759283%2FFunctions%2F-865142711"><span>get</span><wbr></wbr><span><span>Application</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1696759283%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-permissions-view-model/index.html#1696759283%2FFunctions%2F-865142711">T</a><span class="token operator"> : </span><a href="https://developer.android.com/reference/kotlin/android/app/Application.html">Application</a><span class="token operator">&gt; </span><a href="../-permissions-view-model/index.html#1696759283%2FFunctions%2F-865142711"><span class="token function">getApplication</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-permissions-view-model/index.html#1696759283%2FFunctions%2F-865142711">T</a></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1102255800%2FFunctions%2F-865142711" anchor-label="getCloseable" id="1102255800%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="../-report-view-model/index.html#1102255800%2FFunctions%2F-865142711"><span>get</span><wbr></wbr><span><span>Closeable</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1102255800%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="../-report-view-model/index.html#1102255800%2FFunctions%2F-865142711">T</a><span class="token operator"> : </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-auto-closeable/index.html">AutoCloseable</a><span class="token operator">&gt; </span><a href="../-report-view-model/index.html#1102255800%2FFunctions%2F-865142711"><span class="token function">getCloseable</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">key<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../-report-view-model/index.html#1102255800%2FFunctions%2F-865142711">T</a><span class="token operator">?</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="834520805%2FFunctions%2F-865142711" anchor-label="refreshReports" id="834520805%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="refresh-reports.html"><span>refresh</span><wbr></wbr><span><span>Reports</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="834520805%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="refresh-reports.html"><span class="token function">refreshReports</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Triggers a new report fetch for the current map location.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1539579741%2FFunctions%2F-865142711" anchor-label="requestLocationForSms" id="1539579741%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="request-location-for-sms.html"><span>request</span><wbr></wbr><span>Location</span><wbr></wbr><span>For</span><wbr></wbr><span><span>Sms</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1539579741%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">suspend </span><span class="token keyword">fun </span><a href="request-location-for-sms.html"><span class="token function">requestLocationForSms</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">: </span><span data-unresolved-link="com.google.android.gms.maps.model/LatLng///PointingToDeclaration/">LatLng</span><span class="token operator">?</span></div><div class="brief "><p class="paragraph">Determines the location for SMS functions (suspend).</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1761341906%2FFunctions%2F-865142711" anchor-label="requestLocationRefresh" id="1761341906%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="request-location-refresh.html"><span>request</span><wbr></wbr><span>Location</span><wbr></wbr><span><span>Refresh</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1761341906%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="request-location-refresh.html"><span class="token function">requestLocationRefresh</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Resets the camera animation flag and requests a fresh location determination.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1153110680%2FFunctions%2F-865142711" anchor-label="searchLocation" id="1153110680%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="search-location.html"><span>search</span><wbr></wbr><span><span>Location</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1153110680%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="search-location.html"><span class="token function">searchLocation</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">query<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Searches places via Google Places Autocomplete.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="51428867%2FFunctions%2F-865142711" anchor-label="selectLocation" id="51428867%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="select-location.html"><span>select</span><wbr></wbr><span><span>Location</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="51428867%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="select-location.html"><span class="token function">selectLocation</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">latLng<span class="token operator">: </span><span data-unresolved-link="com.google.android.gms.maps.model/LatLng///PointingToDeclaration/">LatLng</span><span class="token punctuation">, </span></span><span class="parameter ">address<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Sets a position manually and updates search field and selection.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="957752099%2FFunctions%2F-865142711" anchor-label="selectSuggestion" id="957752099%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="select-suggestion.html"><span>select</span><wbr></wbr><span><span>Suggestion</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="957752099%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="select-suggestion.html"><span class="token function">selectSuggestion</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">suggestion<span class="token operator">: </span><a href="../-suggestion/index.html">Suggestion</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Selects an autocomplete suggestion and focuses the map on it.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="1335647589%2FFunctions%2F-865142711" anchor-label="toggleClosedPlacesFilter" id="1335647589%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="toggle-closed-places-filter.html"><span>toggle</span><wbr></wbr><span>Closed</span><wbr></wbr><span>Places</span><wbr></wbr><span><span>Filter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="1335647589%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="toggle-closed-places-filter.html"><span class="token function">toggleClosedPlacesFilter</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Toggles the debug mode for showing closed places on/off. Refetches places with the new includeClosed setting.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-747586375%2FFunctions%2F-865142711" anchor-label="toggleHeatmap" id="-747586375%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="toggle-heatmap.html"><span>toggle</span><wbr></wbr><span><span>Heatmap</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-747586375%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="toggle-heatmap.html"><span class="token function">toggleHeatmap</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Toggles the visibility of the danger heatmap overlay.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="940613752%2FFunctions%2F-865142711" anchor-label="togglePublicLocationsFilter" id="940613752%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="toggle-public-locations-filter.html"><span>toggle</span><wbr></wbr><span>Public</span><wbr></wbr><span>Locations</span><wbr></wbr><span><span>Filter</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="940613752%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="toggle-public-locations-filter.html"><span class="token function">togglePublicLocationsFilter</span></a><span class="token punctuation">(</span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Toggles the display of public place markers on the map on/off. Refetches places when toggled on if the list is empty.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="989527683%2FFunctions%2F-865142711" anchor-label="updateSavedCameraPosition" id="989527683%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="update-saved-camera-position.html"><span>update</span><wbr></wbr><span>Saved</span><wbr></wbr><span>Camera</span><wbr></wbr><span><span>Position</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="989527683%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="update-saved-camera-position.html"><span class="token function">updateSavedCameraPosition</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">cameraPosition<span class="token operator">: </span><span data-unresolved-link="com.google.android.gms.maps.model/CameraPosition///PointingToDeclaration/">CameraPosition</span></span></span><span class="token punctuation">)</span></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="-2051509702%2FFunctions%2F-865142711" anchor-label="voteOnReport" id="-2051509702%2FFunctions%2F-865142711" data-filterable-set=":app/release"></a>
+          <div class="table-row table-row_content" data-filterable-current=":app/release" data-filterable-set=":app/release">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="vote-on-report.html"><span>vote</span><wbr></wbr><span>On</span><wbr></wbr><span><span>Report</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-2051509702%2FFunctions%2F-865142711"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":app/release"><div class="symbol monospace"><span class="token keyword">fun </span><a href="vote-on-report.html"><span class="token function">voteOnReport</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">reportId<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-int/index.html">Int</a><span class="token punctuation">, </span></span><span class="parameter ">isUpvote<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-boolean/index.html">Boolean</a></span></span><span class="token punctuation">)</span></div><div class="brief "><p class="paragraph">Votes on a report (upvote/downvote) or removes the vote.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <div class="footer--container">
+            <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+            <div class="footer--content">
+                <div>
+                    <span>Generated by </span>
+                    <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                        Dokka
+                    </a>
+                    <div>© 2026 Copyright</div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
