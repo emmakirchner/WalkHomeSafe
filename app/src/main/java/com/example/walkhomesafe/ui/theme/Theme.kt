@@ -36,7 +36,7 @@ private val LightColorScheme = lightColorScheme(
 /**
  * Main theme composable for the WalkHomeSafe app.
  * Applies a Material 3 color scheme (with dynamic color on Android 12+)
- * and the custom Typography defined in [Type].
+ * and the custom Typography.
  *
  * @param darkTheme Whether to use the dark color scheme
  * @param dynamicColor Whether to use dynamic color (Android 12+)
