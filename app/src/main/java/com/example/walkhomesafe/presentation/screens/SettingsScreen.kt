@@ -34,6 +34,12 @@ import com.example.walkhomesafe.presentation.components.ReauthDialog
 import com.example.walkhomesafe.presentation.screens.report.ReportsByUserScreen
 import com.example.walkhomesafe.viewmodel.AuthViewModel
 
+/**
+ * Settings screen showing user info, navigation to user reports,
+ * and options to log out or delete the account.
+ *
+ * @param authViewModel ViewModel for authentication logic
+ */
 @Composable
 fun SettingsScreen(
     authViewModel: AuthViewModel = viewModel(),

@@ -9,11 +9,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.example.walkhomesafe.model.*
 import com.example.walkhomesafe.presentation.components.navigation.BottomTab
 import com.example.walkhomesafe.presentation.components.navigation.NavigationBar
 import com.example.walkhomesafe.presentation.components.navigation.TopBar
 
+/**
+ * Main screen with a Scaffold containing a top bar, bottom navigation bar,
+ * and tab-based content switching between Home, Contacts, Map, and Settings.
+ */
 @Composable
 fun MainScreen()
 {

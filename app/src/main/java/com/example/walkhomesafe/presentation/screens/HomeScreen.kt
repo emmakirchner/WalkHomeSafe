@@ -75,6 +75,16 @@ import kotlinx.coroutines.launch
 
 private const val FEEDBACK_TEMPLATE = "SMS an %d Kontakt(e) gesendet"
 
+/**
+ * Home screen composable. Displays the emergency action (SOS) button and the
+ * walk-home timer section. Monitors GPS status and handles widget-triggered actions.
+ *
+ * @param homeViewModel ViewModel for alarm and timer logic
+ * @param contactsViewModel ViewModel for emergency contacts
+ * @param messageViewModel ViewModel for the emergency message text
+ * @param permissionsViewModel ViewModel for runtime permissions
+ * @param mapViewModel ViewModel for location determination
+ */
 @Suppress("DefaultLocale")
 @Composable
 fun HomeScreen(
@@ -103,6 +113,9 @@ fun HomeScreen(
     }
     var wasGpsOff by remember { mutableStateOf(!isGpsEnabled) }
 
+    /**
+     * Sends an emergency SMS with the current location (if GPS is enabled and permission granted).
+     */
     fun sendSmsWithLocation() {
         permissionsViewModel.requestAccessFineLocation(
             onGranted = {
@@ -123,10 +136,17 @@ fun HomeScreen(
         )
     }
 
+    /**
+     * Requests SMS permission and sends the emergency SMS.
+     */
     fun triggerSmsAction() {
         permissionsViewModel.requestSendSms { sendSmsWithLocation() }
     }
 
+    /**
+     * Requests SMS and notification permissions, starts the alarm service,
+     * and sends the emergency SMS.
+     */
     fun triggerAlarmAction() {
         permissionsViewModel.requestSendSmsAndNotifications {
             homeViewModel.startAlarmService()
@@ -253,12 +273,31 @@ fun HomeScreen(
     }
 }
 
+/**
+ * Formats seconds into a mm:ss display string.
+ *
+ * @param seconds Total seconds to format
+ * @return Formatted string in "m:ss" format
+ */
 private fun formatTime(seconds: Int): String {
     val m = seconds / 60
     val s = seconds % 60
     return "%d:%02d".format(m, s)
 }
 
+/**
+ * Composable section displaying the walk-home timer UI.
+ * Shows different states depending on the timer phase: idle, countdown, expired, reminder, emergency.
+ *
+ * @param timerState Current state of the walk-home timer
+ * @param remainingSeconds Seconds remaining in the current phase
+ * @param timerEndTime Timer end time in milliseconds since epoch
+ * @param timerDurationInput Current duration input value in minutes
+ * @param hasContacts Whether emergency contacts are configured
+ * @param onSetDuration Callback to change the duration
+ * @param onStart Callback to start the timer
+ * @param onDeactivate Callback to deactivate the timer
+ */
 @Composable
 private fun WalkHomeTimerSection(
     timerState: WalkHomeTimerState.TimerState,

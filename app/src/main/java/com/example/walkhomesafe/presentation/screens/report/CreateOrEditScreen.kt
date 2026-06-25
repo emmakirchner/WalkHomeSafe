@@ -40,6 +40,17 @@ import com.example.walkhomesafe.api.ReportDto
 import com.example.walkhomesafe.presentation.components.StarRating
 import com.example.walkhomesafe.viewmodel.ReportViewModel
 
+/**
+ * Screen for creating a new safety report or editing an existing one.
+ * Displays location info, title, category ratings, and description fields.
+ *
+ * @param latitude Latitude of the report location
+ * @param longitude Longitude of the report location
+ * @param address Human-readable address of the location
+ * @param onBack Callback to navigate back
+ * @param reportToEdit Existing report data when editing, null for new reports
+ * @param reportViewModel ViewModel for report CRUD operations
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateOrEditScreen(

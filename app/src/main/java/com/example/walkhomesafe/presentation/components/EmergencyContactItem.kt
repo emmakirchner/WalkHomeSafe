@@ -10,6 +10,12 @@ import androidx.compose.ui.*
 import androidx.compose.ui.unit.dp
 import com.example.walkhomesafe.model.EmergencyContact
 
+/**
+ * A single emergency contact card displaying name, phone number, and delete button.
+ *
+ * @param contact The contact to display
+ * @param onDelete Callback when the delete button is clicked
+ */
 @Composable
 fun EmergencyContactItem(
     contact: EmergencyContact,

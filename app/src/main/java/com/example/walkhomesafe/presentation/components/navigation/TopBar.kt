@@ -10,9 +10,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 
+/**
+ * Top app bar displaying the app name "WalkHomeSafe" and subtitle "Dein Sicherheitsbegleiter".
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-
 fun TopBar() {
     Column {
         TopAppBar(

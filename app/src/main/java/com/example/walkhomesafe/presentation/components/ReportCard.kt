@@ -26,6 +26,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.walkhomesafe.api.ReportDto
 
+/**
+ * Card displaying a report summary with edit and delete actions.
+ * Shows title, vote counts, coordinates, creation date, and description preview.
+ *
+ * @param report The report to display
+ * @param onEdit Callback when the edit button is clicked
+ * @param onDelete Callback when the delete button is clicked
+ * @param modifier Modifier for styling and layout
+ */
 @Composable
 fun ReportCard(
     report: ReportDto,

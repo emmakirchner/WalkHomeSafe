@@ -26,6 +26,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.walkhomesafe.model.EmergencyContact
 
+/**
+ * Card containing a list of emergency contacts with an add button.
+ * Each contact is rendered as an EmergencyContactItem.
+ *
+ * @param contacts List of emergency contacts to display
+ * @param onDeleteContact Callback when a contact is deleted
+ * @param onAddContact Callback when the add contact button is clicked
+ */
 @Composable
 fun EmergencyContactList(
     contacts: List<EmergencyContact>,

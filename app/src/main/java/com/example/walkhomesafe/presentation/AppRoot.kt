@@ -12,6 +12,12 @@ import com.example.walkhomesafe.presentation.screens.VerifyEmailScreen
 import com.example.walkhomesafe.viewmodel.AuthViewModel
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 
+/**
+ * Root composable of the app. Determines the navigation flow:
+ * - If no user is authenticated -> AuthScreen
+ * - If email is not verified -> VerifyEmailScreen
+ * - Otherwise -> MainScreen with bottom navigation
+ */
 @Composable
 fun AppRoot() {
 

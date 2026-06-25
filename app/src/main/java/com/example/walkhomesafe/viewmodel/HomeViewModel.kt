@@ -40,6 +40,16 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel for the home screen. Manages the emergency alarm (SOS button),
+ * the walk-home timer lifecycle, and sending emergency SMS messages.
+ *
+ * @property isAlarmActive StateFlow indicating whether the alarm sound is playing
+ * @property timerState StateFlow of the walk-home timer state machine
+ * @property remainingSeconds StateFlow of the countdown/emergency remaining seconds
+ * @property timerDurationInput StateFlow of the user's selected timer duration input
+ * @property timerEndTime StateFlow of the timer end timestamp
+ */
 class HomeViewModel(
     application: Application
 ) : AndroidViewModel(application) {
@@ -82,10 +92,19 @@ class HomeViewModel(
         }
     }
 
+    /**
+     * Sets the timer duration input, clamped between 1 and 999 minutes.
+     *
+     * @param minutes Desired duration in minutes
+     */
     fun setTimerDuration(minutes: Int) {
         _timerDurationInput.value = minutes.coerceIn(1, 999)
     }
 
+    /**
+     * Starts the walk-home timer with the current duration input.
+     * Saves the end time and duration to DataStore and schedules the expiry alarm.
+     */
     fun startTimer() {
         val duration = _timerDurationInput.value
         if (duration <= 0) return
@@ -103,6 +122,10 @@ class HomeViewModel(
         WalkHomeTimerReceiver.scheduleExpiry(context, endTime)
     }
 
+    /**
+     * Deactivates the walk-home timer: cancels the tick coroutine, resets the
+     * timer state machine, cancels all scheduled alarms, and clears timer data.
+     */
     fun deactivateTimer() {
         tickJob?.cancel()
         tickJob = null
@@ -114,6 +137,12 @@ class HomeViewModel(
         }
     }
 
+    /**
+     * Starts a coroutine that ticks every second, updating the remaining time display
+     * and transitioning the timer through EXPIRED, REMINDER, and EMERGENCY phases.
+     *
+     * @param endTime The timer end time in milliseconds since epoch
+     */
     private fun startTicking(endTime: Long) {
         _timerEndTime.value = endTime
         tickJob?.cancel()
@@ -166,6 +195,10 @@ class HomeViewModel(
         }
     }
 
+    /**
+     * Sends the emergency SMS to all contacts with the current location,
+     * if it hasn't been sent already. Marks the emergency as sent in DataStore.
+     */
     private fun triggerEmergencySms() {
         viewModelScope.launch {
             val alreadySent = loadTimerEmergencySent(context)
@@ -204,6 +237,9 @@ class HomeViewModel(
         }
     }
 
+    /**
+     * Shows a notification indicating the timer has expired.
+     */
     private fun showTimerExpiredNotification() {
         showNotification(
             id = 100,
@@ -214,6 +250,10 @@ class HomeViewModel(
         )
     }
 
+    /**
+     * Shows a notification reminding the user that the timer has expired
+     * and emergency contacts will be notified soon.
+     */
     private fun showTimerReminderNotification() {
         showNotification(
             id = 101,
@@ -224,6 +264,9 @@ class HomeViewModel(
         )
     }
 
+    /**
+     * Shows a notification confirming that emergency contacts have been notified.
+     */
     private fun showEmergencyNotification() {
         showNotification(
             id = 102,
@@ -234,6 +277,15 @@ class HomeViewModel(
         )
     }
 
+    /**
+     * Creates and displays a timer-related notification with a deactivate action.
+     *
+     * @param id Unique notification ID
+     * @param title Notification title
+     * @param text Notification body text
+     * @param icon Resource ID of the notification icon
+     * @param priority Notification priority (e.g., NotificationCompat.PRIORITY_HIGH)
+     */
     private fun showNotification(id: Int, title: String, text: String, icon: Int, priority: Int) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
@@ -274,6 +326,14 @@ class HomeViewModel(
         notificationManager.notify(id, notification)
     }
 
+    /**
+     * Sends an emergency message via SMS to the specified contacts.
+     * Replaces the location placeholder with a Google Maps link if coordinates are provided.
+     *
+     * @param contacts List of emergency contacts to notify
+     * @param message The message text, may contain the location placeholder
+     * @param locationLatLng Optional coordinates to include as a maps link
+     */
     fun onSendMessage(
         contacts: List<EmergencyContact>,
         message: String,
@@ -292,12 +352,18 @@ class HomeViewModel(
         messageSender.send(contacts, finalMessage)
     }
 
+    /**
+     * Starts the emergency alarm foreground service and sets the alarm state to active.
+     */
     fun startAlarmService() {
         AlarmState.setActive(true)
         val intent = Intent(context, EmergencyAlarmService::class.java)
         ContextCompat.startForegroundService(context, intent)
     }
 
+    /**
+     * Stops the emergency alarm foreground service and sets the alarm state to inactive.
+     */
     fun stopAlarmService() {
         AlarmState.setActive(false)
         val intent = Intent(context, EmergencyAlarmService::class.java)

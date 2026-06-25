@@ -8,6 +8,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 
+/**
+ * Confirmation dialog for deleting a report.
+ * Shows the report title and provides confirm/cancel buttons.
+ *
+ * @param onDismiss Callback when the dialog is dismissed or cancelled
+ * @param onConfirm Callback when deletion is confirmed
+ * @param reportTitle Title of the report to delete (optional, for display)
+ */
 @Composable
 fun DeleteReportDialog(
     onDismiss: () -> Unit,

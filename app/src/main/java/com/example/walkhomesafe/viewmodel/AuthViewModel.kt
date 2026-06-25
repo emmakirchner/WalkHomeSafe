@@ -17,12 +17,25 @@ import com.example.walkhomesafe.services.UserService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * State representing the current authentication status.
+ *
+ * @property firebaseUser The current Firebase user, or null if not authenticated
+ * @property isEmailVerified Whether the user's email has been verified
+ * @property username Display name of the user, or null if not set
+ */
 data class AuthState(
     val firebaseUser: FirebaseUser?,
     val isEmailVerified: Boolean,
     val username: String? = null
 )
 
+/**
+ * ViewModel handling all authentication operations: registration, login,
+ * email verification, password reset, account deletion, and re-authentication.
+ *
+ * @property authState StateFlow emitting the current authentication state
+ */
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = FirebaseAuth.getInstance()
@@ -40,6 +53,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Registers a new user with email, password, and username.
+     * Creates a Firebase Auth account, updates the profile, stores user data in Firestore,
+     * and sends an email verification message.
+     *
+     * @param email The email address for registration
+     * @param password The password (min 6 characters)
+     * @param username The display name for the user
+     * @param onResult Callback with (success, errorMessage)
+     */
     fun register(email: String, password: String, username: String, onResult: (Boolean, String?) -> Unit) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
@@ -75,6 +98,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
+    /**
+     * Signs in an existing user with email and password.
+     *
+     * @param email The user's email
+     * @param password The user's password
+     * @param onResult Callback with (success, errorMessage)
+     */
     fun login(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
@@ -86,6 +116,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
+    /**
+     * Maps Firebase authentication exceptions to localized German error messages.
+     *
+     * @param exception The throwable from a Firebase Auth operation, or null
+     * @return A human-readable error message in German
+     */
     private fun localizedError(exception: Throwable?): String {
         return when (exception) {
             is FirebaseAuthWeakPasswordException -> "Das Passwort muss mindestens 6 Zeichen lang sein"
@@ -97,6 +133,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Resends the email verification message to the current user.
+     *
+     * @param onResult Callback with (success, errorMessage)
+     */
     fun resendVerificationEmail(onResult: (Boolean, String?) -> Unit) {
         auth.currentUser?.sendEmailVerification()
             ?.addOnCompleteListener { task ->
@@ -104,6 +145,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             } ?: onResult(false, "Kein Benutzer angemeldet")
     }
 
+    /**
+     * Reloads the current user and checks whether the email has been verified.
+     *
+     * @param onResult Callback with true if email is verified, false otherwise
+     */
     fun checkEmailVerified(onResult: (Boolean) -> Unit) {
         auth.currentUser?.reload()?.addOnCompleteListener {
             val user = auth.currentUser
@@ -112,6 +158,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Sends a password reset email to the given address.
+     *
+     * @param email The email address for the password reset
+     * @param onResult Callback with (success, errorMessage)
+     */
     fun resetPassword(email: String, onResult: (Boolean, String?) -> Unit) {
         auth.sendPasswordResetEmail(email)
             .addOnCompleteListener { task ->
@@ -119,10 +171,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
+    /**
+     * Signs out the current user.
+     */
     fun logout() {
         auth.signOut()
     }
 
+    /**
+     * Deletes the current user's account. First calls the backend UserService,
+     * then deletes the Firebase Auth account.
+     * If re-authentication is required, the callback receives "RECENT_LOGIN_REQUIRED".
+     *
+     * @param onResult Callback with (success, errorMessage)
+     */
     fun deleteAccount(onResult: (Boolean, String?) -> Unit) {
         val user = auth.currentUser ?: run {
             onResult(false, "Kein Benutzer angemeldet")
@@ -145,6 +207,13 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Re-authenticates the user with email and password, then deletes the account.
+     *
+     * @param email The user's email for re-authentication
+     * @param password The user's password for re-authentication
+     * @param onResult Callback with (success, errorMessage)
+     */
     fun reauthenticateAndDelete(email: String, password: String, onResult: (Boolean, String?) -> Unit) {
         val user = auth.currentUser ?: run {
             onResult(false, "Kein Benutzer angemeldet")

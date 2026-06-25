@@ -5,9 +5,20 @@ import android.telephony.SmsManager
 import android.util.Log
 import com.example.walkhomesafe.model.EmergencyContact
 
+/**
+ * Utility class for sending SMS messages to emergency contacts.
+ *
+ * @param context Context for accessing the SmsManager system service
+ */
 class MessageSender(
     private val context: Context
 ) {
+    /**
+     * Sends an SMS to each contact in the provided list.
+     *
+     * @param contacts List of emergency contacts to notify
+     * @param message The SMS text to send
+     */
     fun send(
         contacts: List<EmergencyContact>,
         message: String

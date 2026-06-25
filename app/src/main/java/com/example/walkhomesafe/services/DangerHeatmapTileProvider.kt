@@ -17,11 +17,27 @@ import kotlin.math.exp
 import kotlin.math.sinh
 import kotlin.math.sqrt
 
+/**
+ * Custom TileProvider that renders a real-time danger heatmap overlay on Google Maps.
+ * Each report contributes positive (danger) or negative (safe) influence based on its ratings.
+ *
+ * @property reports List of safety reports to render on the heatmap
+ * @property influenceRadiusMeters Radius of influence for each report in meters (default 350)
+ */
 class DangerHeatmapTileProvider(
     private val reports: List<ReportDto>,
     private val influenceRadiusMeters: Double = 350.0
 ) : TileProvider {
 
+    /**
+     * Generates a 256x256 heatmap tile for the given tile coordinates and zoom level.
+     * Uses a grid-based bilinear interpolation approach for performance.
+     *
+     * @param x Tile X coordinate
+     * @param y Tile Y coordinate
+     * @param zoom Zoom level
+     * @return The generated PNG tile, or NO_TILE if no relevant reports exist
+     */
     override fun getTile(x: Int, y: Int, zoom: Int): Tile {
         return try {
             val bounds = tileBounds(x, y, zoom)
@@ -121,6 +137,13 @@ class DangerHeatmapTileProvider(
         }
     }
 
+    /**
+     * Computes a Gaussian weight for a given distance, used to smooth the heatmap influence.
+     * Sigma is set to influenceRadiusMeters / 3.
+     *
+     * @param distance Distance in meters
+     * @return Gaussian weight between 0 and 1
+     */
     private fun gaussianWeight(distance: Double): Double {
         val sigma = influenceRadiusMeters / 3.0
         return exp(-(distance * distance) / (2.0 * sigma * sigma))
@@ -132,6 +155,14 @@ class DangerHeatmapTileProvider(
         private const val MAX_SCORE = 2.5
         private const val NEUTRAL_EPSILON = 0.3
 
+        /**
+         * Bounding box of a map tile in geographic coordinates.
+         *
+         * @property south Southern latitude bound
+         * @property north Northern latitude bound
+         * @property west Western longitude bound
+         * @property east Eastern longitude bound
+         */
         private data class TileBounds(
             val south: Double,
             val north: Double,
@@ -139,6 +170,14 @@ class DangerHeatmapTileProvider(
             val east: Double
         )
 
+        /**
+         * Computes the geographic bounds for a given tile coordinate and zoom level.
+         *
+         * @param x Tile X coordinate
+         * @param y Tile Y coordinate
+         * @param zoom Zoom level
+         * @return TileBounds with south/north/west/east in degrees
+         */
         private fun tileBounds(x: Int, y: Int, zoom: Int): TileBounds {
             val n = 1 shl zoom
             val lonMin = x.toDouble() / n * 360.0 - 180.0
@@ -153,12 +192,27 @@ class DangerHeatmapTileProvider(
             )
         }
 
+        /**
+         * Calculates the distance between two LatLng points in meters using the WGS84 ellipsoid.
+         *
+         * @param a First coordinate
+         * @param b Second coordinate
+         * @return Distance in meters
+         */
         private fun distanceBetweenInMeters(a: LatLng, b: LatLng): Double {
             val results = FloatArray(1)
             Location.distanceBetween(a.latitude, a.longitude, b.latitude, b.longitude, results)
             return results[0].toDouble()
         }
 
+        /**
+         * Internal representation of a report's influence on the heatmap.
+         *
+         * @property latitude Latitude of the report
+         * @property longitude Longitude of the report
+         * @property severityFactor Weight based on rating severity (0.5-2.0)
+         * @property sign +1 for danger (positive score), -1 for safe (negative score)
+         */
         private data class HeatmapEntry(
             val latitude: Double,
             val longitude: Double,
@@ -166,6 +220,14 @@ class DangerHeatmapTileProvider(
             val sign: Double
         )
 
+        /**
+         * Maps a cumulative heatmap score to an ARGB color.
+         * Positive scores (danger) render as red, negative scores (safe) as green.
+         * Scores near zero are transparent.
+         *
+         * @param score The cumulative score at a pixel
+         * @return ARGB color integer
+         */
         private fun scoreToColor(score: Double): Int {
             val absScore = abs(score)
             if (absScore < NEUTRAL_EPSILON) {

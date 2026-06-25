@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.walkhomesafe.MainActivity
@@ -21,8 +20,20 @@ import com.example.walkhomesafe.viewmodel.LOCATION_PLACEHOLDER
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
+/**
+ * BroadcastReceiver that handles walk-home timer lifecycle events scheduled via AlarmManager.
+ *
+ * Acts as a background worker for timer expiry, reminder notifications,
+ * emergency SMS sending, and timer deactivation.
+ */
 class WalkHomeTimerReceiver : BroadcastReceiver() {
 
+    /**
+     * Dispatches the incoming intent to the appropriate handler based on action.
+     *
+     * @param context The context in which the receiver is running
+     * @param intent The intent containing the timer action
+     */
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             ACTION_TIMER_EXPIRED -> handleExpired(context)
@@ -32,6 +43,12 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
         }
     }
 
+    /**
+     * Handles timer expiry: transitions state and shows an ongoing notification
+     * with an "Arrived" action button. Also schedules reminder and emergency intents.
+     *
+     * @param context The context for notifications and alarm scheduling
+     */
     private fun handleExpired(context: Context) {
         val currentPhase = WalkHomeTimerState.state.value.phase
         if (currentPhase == TimerPhase.IDLE || currentPhase == TimerPhase.COUNTDOWN) {
@@ -77,6 +94,11 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
         }
     }
 
+    /**
+     * Handles the reminder phase: shows a reminder notification with emergency warning.
+     *
+     * @param context The context for notifications
+     */
     private fun handleReminder(context: Context) {
         val alreadySent = runBlocking { loadTimerEmergencySent(context) }
         if (alreadySent) return
@@ -111,6 +133,12 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
         notificationManager.notify(NOTIFICATION_TIMER_REMINDER, notification)
     }
 
+    /**
+     * Handles the emergency phase: sends SMS to all emergency contacts
+     * with the current location, if not already sent.
+     *
+     * @param context The context for SMS sending and notifications
+     */
     private fun handleEmergency(context: Context) {
         WalkHomeTimerState.triggerEmergency()
 
@@ -187,11 +215,25 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
         notificationManager.notify(NOTIFICATION_TIMER_EMERGENCY, notification)
     }
 
+    /**
+     * Handles timer deactivation: cancels all scheduled alarms and resets the timer state.
+     *
+     * @param context The context for alarm cancellation
+     */
     private fun handleDeactivate(context: Context) {
         cancelAll(context)
         WalkHomeTimerState.deactivate()
     }
 
+    /**
+     * Schedules a one-shot alarm via AlarmManager for a timer action.
+     * Tries setAlarmClock first, falls back to setExactAndAllowWhileIdle, then set.
+     *
+     * @param context The context for the alarm service
+     * @param action The intent action string to schedule
+     * @param delayMs Delay from now in milliseconds
+     * @param requestCode Unique request code for the pending intent
+     */
     private fun scheduleAlarm(context: Context, action: String, delayMs: Long, requestCode: Int) {
         val intent = Intent(context, WalkHomeTimerReceiver::class.java).apply {
             this.action = action
@@ -224,9 +266,13 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        /** Action for timer expiry broadcast. */
         const val ACTION_TIMER_EXPIRED = "com.example.walkhomesafe.TIMER_EXPIRED"
+        /** Action for timer reminder broadcast. */
         const val ACTION_TIMER_REMINDER = "com.example.walkhomesafe.TIMER_REMINDER"
+        /** Action for timer emergency broadcast. */
         const val ACTION_TIMER_EMERGENCY = "com.example.walkhomesafe.TIMER_EMERGENCY"
+        /** Action for timer deactivation broadcast. */
         const val ACTION_TIMER_DEACTIVATE = "com.example.walkhomesafe.TIMER_DEACTIVATE"
 
         private const val CHANNEL_TIMER = "walk_home_timer"
@@ -241,6 +287,11 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
         private const val REMINDER_DELAY_MS = 120_000L
         private const val EMERGENCY_DELAY_MS = 240_000L
 
+        /**
+         * Creates the notification channel for timer notifications.
+         *
+         * @param notificationManager The system notification manager
+         */
         private fun createTimerChannel(notificationManager: NotificationManager) {
             val channel = android.app.NotificationChannel(
                 CHANNEL_TIMER,
@@ -252,6 +303,12 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
             notificationManager.createNotificationChannel(channel)
         }
 
+        /**
+         * Schedules the timer expiry alarm at a specific point in time.
+         *
+         * @param context The context for the alarm service
+         * @param endTimeMillis The absolute end time in milliseconds since epoch
+         */
         fun scheduleExpiry(context: Context, endTimeMillis: Long) {
             val intent = Intent(context, WalkHomeTimerReceiver::class.java).apply {
                 action = ACTION_TIMER_EXPIRED
@@ -283,6 +340,11 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
             }
         }
 
+        /**
+         * Cancels all scheduled timer alarms and dismisses related notifications.
+         *
+         * @param context The context for alarm and notification cancellation
+         */
         fun cancelAll(context: Context) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
 
@@ -296,6 +358,14 @@ class WalkHomeTimerReceiver : BroadcastReceiver() {
             notificationManager.cancel(NOTIFICATION_TIMER_EMERGENCY)
         }
 
+        /**
+         * Cancels a single alarm by action and request code.
+         *
+         * @param context The context for the pending intent
+         * @param alarmManager The system alarm manager
+         * @param action The action string of the alarm to cancel
+         * @param requestCode The request code used when the alarm was scheduled
+         */
         private fun cancelAlarm(context: Context, alarmManager: android.app.AlarmManager, action: String, requestCode: Int) {
             val intent = Intent(context, WalkHomeTimerReceiver::class.java).apply {
                 this.action = action

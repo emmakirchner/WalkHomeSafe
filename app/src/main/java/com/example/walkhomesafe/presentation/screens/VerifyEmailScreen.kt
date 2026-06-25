@@ -24,6 +24,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.viewmodel.AuthViewModel
 
+/**
+ * Screen shown after registration prompting the user to verify their email address.
+ * Provides a button to check verification status and an option to resend the verification email.
+ *
+ * @param authViewModel ViewModel for authentication logic
+ */
 @Composable
 fun VerifyEmailScreen(
     authViewModel: AuthViewModel = viewModel(),

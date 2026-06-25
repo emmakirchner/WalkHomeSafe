@@ -7,6 +7,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
+/**
+ * Service object for fetching report rating categories via the REST API.
+ */
 object ReportCategoryService {
 
     private const val BASE_URL = "https://walkhomesafe-frfgcrdtfkaqg3cd.germanywestcentral-01.azurewebsites.net"
@@ -17,6 +20,11 @@ object ReportCategoryService {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
+    /**
+     * Gets all available report rating categories.
+     *
+     * @return List of all report categories, empty list on error
+     */
     suspend fun getAll(): List<ReportCategoryDto> = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("$BASE_URL/api/report-categories")
