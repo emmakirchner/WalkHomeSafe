@@ -1,6 +1,5 @@
 package com.example.walkhomesafe.presentation.screens.report
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,7 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.api.ReportDto
+import com.example.walkhomesafe.presentation.components.StarRating
 import com.example.walkhomesafe.viewmodel.ReportViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -230,26 +229,4 @@ fun CreateOrEditScreen(
     }
 }
 
-@Composable
-private fun StarRating(
-    rating: Int,
-    onRatingChange: (Int) -> Unit
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        for (i in 1..5) {
-            IconButton(
-                onClick = { onRatingChange(i) },
-                modifier = Modifier
-                    .width(32.dp)
-                    .height(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Star,
-                    contentDescription = "$i Stern",
-                    tint = if (i <= rating) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surfaceVariant
-                )
-            }
-        }
-    }
-}
+

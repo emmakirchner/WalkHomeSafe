@@ -1,23 +1,26 @@
 package com.example.walkhomesafe.presentation.screens
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import androidx.core.graphics.createBitmap
 import android.location.LocationManager
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,8 +29,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOff
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,22 +70,63 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.maps.model.TileOverlay
+import com.google.android.gms.maps.model.TileOverlayOptions
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.example.walkhomesafe.services.DangerHeatmapTileProvider
+import com.google.android.gms.maps.model.LatLng
 import com.example.walkhomesafe.R
+import com.example.walkhomesafe.api.ReportDto
+import com.example.walkhomesafe.presentation.components.MapReportCard
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.ui.draw.rotate
 import kotlinx.coroutines.delay
 
+/**
+ * Main map screen view.
+ *
+ * Contains the Google map with location tracking, search bar,
+ * report list, heatmap overlay, and filter buttons.
+ *
+ * @param mapViewModel ViewModel for map logic, location, and reports
+ * @param permissionsViewModel ViewModel for runtime permissions
+ */
 @Composable
 fun MapScreen(
     mapViewModel: MapViewModel = viewModel(),
     permissionsViewModel: PermissionsViewModel = viewModel()
 ) {
     var showCreateReport by remember { mutableStateOf(false) }
+    var collapsed by remember { mutableStateOf(true) }
+    var visuallyCollapsed by remember { mutableStateOf(true) }
+    var selectedReportId by remember { mutableStateOf<Int?>(null) }
+    /** Delays visual collapsing by 600ms for a smooth report panel animation. */
+    LaunchedEffect(collapsed) {
+        if (collapsed) {
+            delay(600)
+            visuallyCollapsed = true
+        } else {
+            visuallyCollapsed = false
+        }
+    }
+    /** Animates the arrow rotation when collapsing/expanding the report panel (600ms). */
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (collapsed) -90f else 0f,
+        animationSpec = tween(durationMillis = 600),
+        label = "arrowRotation"
+    )
 
     if (showCreateReport) {
         val loc = mapViewModel.selectedLocation.collectAsState().value
@@ -92,6 +138,7 @@ fun MapScreen(
                 address = addr,
                 onBack = {
                     mapViewModel.clearSelection()
+                    mapViewModel.refreshReports()
                     showCreateReport = false
                 }
             )
@@ -108,6 +155,7 @@ fun MapScreen(
     val selectedLocation by mapViewModel.selectedLocation.collectAsState()
     val selectedAddress by mapViewModel.selectedAddress.collectAsState()
 
+    /** Requests location permission on start and initiates location determination. */
     LaunchedEffect(Unit) {
         permissionsViewModel.requestAccessFineLocation {
             mapViewModel.fetchLocation()
@@ -120,6 +168,7 @@ fun MapScreen(
         position = savedCameraPosition
     }
 
+    /** Saves the camera position on every movement in the ViewModel. */
     LaunchedEffect(cameraPositionState.position) {
         mapViewModel.updateSavedCameraPosition(cameraPositionState.position)
     }
@@ -127,6 +176,10 @@ fun MapScreen(
     val showPublicLocations by mapViewModel.showPublicLocations.collectAsState()
     val showClosedPlaces by mapViewModel.showClosedPlaces.collectAsState()
     val nearbyPlaces by mapViewModel.nearbyPlaces.collectAsState()
+    val reports by mapViewModel.reports.collectAsState()
+    val userVotes by mapViewModel.userVotes.collectAsState()
+    val isLoadingReports by mapViewModel.isLoadingReports.collectAsState()
+    val showHeatmap by mapViewModel.showHeatmap.collectAsState()
 
     val mapStyleOptions = remember(context) {
         try {
@@ -142,6 +195,7 @@ fun MapScreen(
 
     var wasGpsOff by remember { mutableStateOf(!isGpsEnabled) }
 
+    /** Monitors GPS status every 3s; requests location update on restore. */
     LaunchedEffect(Unit) {
         while (true) {
             val current = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
@@ -155,7 +209,7 @@ fun MapScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(0.75f)) {
+        Box(modifier = Modifier.weight(if (visuallyCollapsed) 1f else 1e-10f)) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
@@ -191,6 +245,37 @@ fun MapScreen(
                     PlaceMarker(place = place)
                 }
             }
+
+            selectedReportId?.let { id ->
+                val report = reports.find { it.id == id }
+                report?.let { r ->
+                    key("selected_report_${r.id}") {
+                        Marker(
+                            state = remember { MarkerState(position = LatLng(r.latitude, r.longitude)) },
+                            title = r.title,
+                            icon = selectedReportMarker
+                        )
+                    }
+                }
+            }
+
+            val overlayRef = remember { mutableStateOf<TileOverlay?>(null) }
+
+            /** Creates or removes the heatmap tile overlay based on current report data. */
+            MapEffect(reports) { map ->
+                overlayRef.value?.remove()
+                if (reports.isNotEmpty()) {
+                    val provider = DangerHeatmapTileProvider(reports = reports)
+                    overlayRef.value = map.addTileOverlay(TileOverlayOptions().tileProvider(provider))
+                } else {
+                    overlayRef.value = null
+                }
+            }
+
+            /** Toggles the heatmap overlay visibility without rebuilding the tiles. */
+            LaunchedEffect(showHeatmap) {
+                overlayRef.value?.isVisible = showHeatmap
+            }
         }
 
         when (val state = uiState) {
@@ -201,6 +286,7 @@ fun MapScreen(
                 )
             }
             is MapUiState.Location -> {
+                /** Moves the camera to the user's position on first location fix (zoom 15, one-time). */
                 LaunchedEffect(state.latLng, autoFocusTrigger) {
                     if (!mapViewModel.hasAnimated) {
                         cameraPositionState.animate(
@@ -309,6 +395,11 @@ fun MapScreen(
                 .align(Alignment.BottomEnd)
                 .padding(end = 10.dp, bottom = 100.dp)
         ) {
+            HeatmapToggleButton(
+                isEnabled = showHeatmap,
+                onClick = { mapViewModel.toggleHeatmap() }
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             PublicLocationsFilterButton(
                 isEnabled = showPublicLocations,
                 isDebugMode = showClosedPlaces,
@@ -322,14 +413,25 @@ fun MapScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.25f)
+                .then(
+                    if (visuallyCollapsed) Modifier.wrapContentHeight()
+                    else Modifier.weight(1f)
+                )
                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                .verticalScroll(rememberScrollState())
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { collapsed = !collapsed },
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = if (collapsed) "Erweitern" else "Einklappen",
+                    modifier = Modifier.rotate(arrowRotation),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = Icons.Filled.Place,
                     contentDescription = null,
@@ -357,24 +459,120 @@ fun MapScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            if (selectedLocation == null) {
-                Text(
-                    text = "W\u00e4hle einen Ort auf der Karte oder suche nach einer Adresse, um Berichte zu sehen.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            AnimatedVisibility(
+                visible = !collapsed,
+                enter = expandVertically(
+                    expandFrom = Alignment.Top,
+                    animationSpec = tween(durationMillis = 600)
+                ),
+                exit = shrinkVertically(
+                    shrinkTowards = Alignment.Top,
+                    animationSpec = tween(durationMillis = 600)
                 )
-            } else {
-                Text(
-                    text = "Keine Berichte für diesen Ort gefunden.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                    if (isLoadingReports) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Lade Berichte...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else if (reports.isNotEmpty()) {
+                    reports.forEach { report ->
+                        key(report.id) {
+                            MapReportCard(
+                                report = report,
+                                userVote = userVotes[report.id],
+                                onVote = { isUpvote -> mapViewModel.voteOnReport(report.id, isUpvote) },
+                                isSelected = selectedReportId == report.id,
+                                onToggleSelect = {
+                                    val id = report.id
+                                    if (selectedReportId != id) {
+                                        selectedReportId = id
+                                        collapsed = true
+                                    } else {
+                                        selectedReportId = null
+                                    }
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Keine Berichte in der Nähe gefunden.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                }
             }
         }
     }
 }
+}
 
+/**
+ * Circular button to toggle the heatmap overlay visibility.
+ *
+ * Shows a Layers icon (filled = visible, outlined = hidden).
+ *
+ * @param isEnabled true if the heatmap is currently visible
+ * @param onClick Callback on button click
+ * @param modifier Modifier for positioning and layout
+ */
+@Composable
+private fun HeatmapToggleButton(
+    isEnabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .size(40.dp)
+            .clickable(onClick = onClick),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        shadowElevation = 6.dp
+    ) {
+        Icon(
+            imageVector = if (isEnabled) Icons.Filled.Layers else Icons.Outlined.Layers,
+            contentDescription = if (isEnabled) "Heatmap ausblenden" else "Heatmap anzeigen"
+        )
+    }
+}
+
+/**
+ * Circular button for filtering public places on the map.
+ *
+ * Single click toggles open places on/off, long click toggles
+ * the debug mode for closed places.
+ *
+ * @param isEnabled true if the filter is active
+ * @param isDebugMode true if debug mode is active
+ * @param onClick Callback on single click
+ * @param onLongClick Callback on long click
+ * @param modifier Modifier for positioning and layout
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PublicLocationsFilterButton(
@@ -407,6 +605,14 @@ private fun PublicLocationsFilterButton(
     }
 }
 
+/**
+ * Marks a public place on the map.
+ *
+ * The icon is chosen based on place type and open status:
+ * open = colored, closed = grey, unknown = light grey.
+ *
+ * @param place The place to display with position, type, and opening hours
+ */
 @Composable
 private fun PlaceMarker(
     place: NearbyPlace
@@ -415,12 +621,13 @@ private fun PlaceMarker(
         MarkerState(position = place.latLng)
     }
 
-    val statusText = when {
-        place.isOpenNow == false -> "Geschlossen"
-        place.closingTime == "24/7" -> "Ge\u00f6ffnet 24/7"
-        place.closingTime != null -> "Ge\u00f6ffnet bis ${place.closingTime} Uhr"
-        place.isOpenNow == true -> "Ge\u00f6ffnet"
-        else -> "Unbekannt"
+    val statusText = when (place.isOpenNow) {
+        false -> "Geschlossen"
+        else -> when (place.closingTime) {
+            "24/7" -> "Ge\u00f6ffnet 24/7"
+            null -> if (place.isOpenNow == true) "Ge\u00f6ffnet" else "Unbekannt"
+            else -> "Ge\u00f6ffnet bis ${place.closingTime} Uhr"
+        }
     }
 
     val snippetText = "${place.placeType.displayName} | $statusText"
@@ -429,17 +636,18 @@ private fun PlaceMarker(
         state = markerState,
         title = place.name,
         snippet = snippetText,
-        icon = when {
-            place.isOpenNow == false -> greyMarker
-            place.isOpenNow == null && place.closingTime == null -> unknownMarker
+        icon = when (place.isOpenNow) {
+            false -> greyMarker
+            null -> if (place.closingTime == null) unknownMarker else getMarkerIconForType(place.placeType)
             else -> getMarkerIconForType(place.placeType)
         }
     )
 }
 
+/** Grey marker for closed places, created once as bitmap and cached. */
 private val greyMarker: BitmapDescriptor by lazy {
     val size = 40
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(size, size)
     val canvas = Canvas(bitmap)
     val paint = Paint().apply {
         color = android.graphics.Color.GRAY
@@ -449,9 +657,10 @@ private val greyMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
+/** Light grey marker for places with unknown open status, cached as bitmap. */
 private val unknownMarker: BitmapDescriptor by lazy {
     val size = 40
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(size, size)
     val canvas = Canvas(bitmap)
     val paint = Paint().apply {
         color = android.graphics.Color.LTGRAY
@@ -461,12 +670,50 @@ private val unknownMarker: BitmapDescriptor by lazy {
     BitmapDescriptorFactory.fromBitmap(bitmap)
 }
 
+/** Red marker with "!" for the report selected on the map (60px, more visible). */
+private val selectedReportMarker: BitmapDescriptor by lazy {
+    val size = 60
+    val bitmap = createBitmap(size, size)
+    val canvas = Canvas(bitmap)
+    val fillPaint = Paint().apply {
+        color = android.graphics.Color.WHITE
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 2, fillPaint)
+    val borderPaint = Paint().apply {
+        color = android.graphics.Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 5f
+        isAntiAlias = true
+    }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 2, borderPaint)
+    val textPaint = Paint().apply {
+        color = android.graphics.Color.RED
+        textSize = 36f
+        textAlign = Paint.Align.CENTER
+        isFakeBoldText = true
+        isAntiAlias = true
+    }
+    canvas.drawText("!", size / 2f, size / 2f + 14f, textPaint)
+    BitmapDescriptorFactory.fromBitmap(bitmap)
+}
+
+/** Cache for place-type-specific marker bitmaps, avoids recreation. */
 private val markerCache = mutableMapOf<PlaceType, BitmapDescriptor>()
 
+/**
+ * Returns the marker icon for a place type.
+ *
+ * Icons are created on demand and held in the internal cache.
+ *
+ * @param placeType The place type for which a marker is needed
+ * @return The BitmapDescriptor of the corresponding marker icon
+ */
 private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
     return markerCache.getOrPut(placeType) {
         val size = 40
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
         val paint = Paint().apply {
             color = placeType.darkerColor
@@ -477,6 +724,11 @@ private fun getMarkerIconForType(placeType: PlaceType): BitmapDescriptor {
     }
 }
 
+/**
+ * Color mapping per place type for marker symbols.
+ *
+ * @return ARGB color value as Int for the respective place type
+ */
 private val PlaceType.darkerColor: Int
     get() = when (this) {
         PlaceType.RESTAURANT -> android.graphics.Color.rgb(200, 80, 0)
@@ -489,3 +741,5 @@ private val PlaceType.darkerColor: Int
         PlaceType.HOSPITAL -> android.graphics.Color.rgb(180, 0, 0)
         PlaceType.GAS_STATION -> android.graphics.Color.rgb(100, 0, 180)
     }
+
+

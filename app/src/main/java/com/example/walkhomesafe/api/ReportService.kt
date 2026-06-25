@@ -47,13 +47,18 @@ object ReportService {
         longitude: Double? = null,
         radiusInMeters: Int? = null
     ): List<ReportDto> = withContext(Dispatchers.IO) {
-        val params = mutableListOf<String>()
-        latitude?.let { params.add("Latitude=$it") }
-        longitude?.let { params.add("Longitude=$it") }
-        radiusInMeters?.let { params.add("RadiusInMeters=$it") }
-        val query = if (params.isNotEmpty()) "?${params.joinToString("&")}" else ""
+        val url = buildString {
+            append("$BASE_URL/api/reports")
+            val params = mutableListOf<String>()
+            latitude?.let { params.add("Latitude=$it") }
+            longitude?.let { params.add("Longitude=$it") }
+            radiusInMeters?.let { params.add("RadiusInMeters=$it") }
+            if (params.isNotEmpty()) {
+                append("?").append(params.joinToString("&"))
+            }
+        }
         val request = Request.Builder()
-            .url("$BASE_URL/api/reports$query")
+            .url(url)
             .get()
             .build()
         try {

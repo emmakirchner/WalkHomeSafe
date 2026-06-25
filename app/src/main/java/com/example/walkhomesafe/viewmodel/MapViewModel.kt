@@ -2,9 +2,12 @@ package com.example.walkhomesafe.viewmodel
 
 import android.app.Application
 import android.location.Location
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.walkhomesafe.api.ReportDto
+import com.example.walkhomesafe.api.ReportService
+import com.example.walkhomesafe.api.ReportVoteService
+import com.example.walkhomesafe.api.SaveReportVoteDto
 import com.example.walkhomesafe.services.PlacesRepository
 import com.example.walkhomesafe.model.NearbyPlace
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -19,6 +22,7 @@ import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,17 +30,51 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
+/**
+ * Data class for an autocomplete suggestion from the Google Places API.
+ *
+ * @property placeId Unique ID of the place at Google Places
+ * @property text Display text of the suggestion
+ */
 data class Suggestion(
     val placeId: String,
     val text: String
 )
 
+/**
+ * Sealed interface for the map screen UI states.
+ *
+ * @property Loading Displayed during location determination
+ * @property Location Location successfully determined, contains [LatLng]
+ * @property Error Error during location determination with error message
+ */
 sealed interface MapUiState {
     data object Loading : MapUiState
     data class Location(val latLng: LatLng) : MapUiState
     data class Error(val message: String) : MapUiState
 }
 
+/**
+ * ViewModel for the map screen.
+ *
+ * Manages location, camera position, reports, places, search, and heatmap overlay.
+ *
+ * @property uiState Current UI state
+ * @property savedCameraPosition Saved camera position
+ * @property autoFocusTrigger Trigger for automatic camera focusing
+ * @property searchQuery Current search query
+ * @property suggestions Autocomplete suggestions
+ * @property selectedLocation Position selected by the user
+ * @property selectedAddress Address of the selected position
+ * @property showPublicLocations Whether public places are shown
+ * @property showClosedPlaces Whether closed places are included in debug mode
+ * @property showHeatmap Whether the heatmap overlay is visible
+ * @property nearbyPlaces Nearby public places
+ * @property isLoadingPlaces Loading state of places
+ * @property reports Safety reports
+ * @property isLoadingReports Loading state of reports
+ * @property userVotes User's voting state (report ID → Boolean)
+ */
 class MapViewModel(
     application: Application
 ) : AndroidViewModel(application) {
@@ -65,14 +103,27 @@ class MapViewModel(
     private val _showClosedPlaces = MutableStateFlow(false)
     val showClosedPlaces: StateFlow<Boolean> = _showClosedPlaces.asStateFlow()
 
+    private val _showHeatmap = MutableStateFlow(true)
+    val showHeatmap: StateFlow<Boolean> = _showHeatmap.asStateFlow()
+
     private val _nearbyPlaces = MutableStateFlow<List<NearbyPlace>>(emptyList())
     val nearbyPlaces: StateFlow<List<NearbyPlace>> = _nearbyPlaces.asStateFlow()
 
     private val _isLoadingPlaces = MutableStateFlow(false)
     val isLoadingPlaces: StateFlow<Boolean> = _isLoadingPlaces.asStateFlow()
 
+    private val _reports = MutableStateFlow<List<ReportDto>>(emptyList())
+    val reports: StateFlow<List<ReportDto>> = _reports.asStateFlow()
+
+    private val _isLoadingReports = MutableStateFlow(false)
+    val isLoadingReports: StateFlow<Boolean> = _isLoadingReports.asStateFlow()
+
+    private val _userVotes = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+    val userVotes: StateFlow<Map<Int, Boolean>> = _userVotes.asStateFlow()
+
     private var currentLocation: LatLng? = null
     private var placesFetchJob: Job? = null
+    private var autoRefreshJob: Job? = null
 
     val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
     val savedCameraPosition: StateFlow<CameraPosition> = _savedCameraPosition.asStateFlow()
@@ -83,6 +134,7 @@ class MapViewModel(
     val selectedLocation: StateFlow<LatLng?> = _selectedLocation.asStateFlow()
     val selectedAddress: StateFlow<String> = _selectedAddress.asStateFlow()
 
+    /** Starts one-time location determination on first call. */
     fun fetchLocation() {
         if (hasFetchedOnce) return
         hasFetchedOnce = true
@@ -95,10 +147,14 @@ class MapViewModel(
         }
     }
 
+    /**
+     * @param cameraPosition Current position of the map camera
+     */
     fun updateSavedCameraPosition(cameraPosition: CameraPosition) {
         _savedCameraPosition.value = cameraPosition
     }
 
+    /** Resets camera animation and requests a location update. */
     fun requestLocationRefresh() {
         hasAnimated = false
         viewModelScope.launch {
@@ -106,6 +162,10 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Searches places via Google Places Autocomplete.
+     * @param query The user's search query
+     */
     fun searchLocation(query: String) {
         _searchQuery.value = query
         if (query.isBlank()) {
@@ -127,6 +187,10 @@ class MapViewModel(
             }
     }
 
+    /**
+     * Selects an autocomplete suggestion and focuses the map on it.
+     * @param suggestion The selected suggestion
+     */
     fun selectSuggestion(suggestion: Suggestion) {
         val fields = listOf(
             Place.Field.ID,
@@ -147,6 +211,11 @@ class MapViewModel(
             }
     }
 
+    /**
+     * Sets a position manually and updates search field and selection.
+     * @param latLng Coordinates of the position
+     * @param address Address text for display
+     */
     fun selectLocation(latLng: LatLng, address: String) {
         _selectedLocation.value = latLng
         _selectedAddress.value = address
@@ -154,6 +223,7 @@ class MapViewModel(
         _suggestions.value = emptyList()
     }
 
+    /** Resets the manual selection and clears the search field. */
     fun clearSelection() {
         _selectedLocation.value = null
         _selectedAddress.value = ""
@@ -161,6 +231,49 @@ class MapViewModel(
         _suggestions.value = emptyList()
     }
 
+    /** Triggers a new report fetch for the current location. */
+    fun refreshReports() {
+        currentLocation?.let { fetchReports(it) }
+    }
+
+    /**
+     * Votes on a report (upvote/downvote) or removes the vote.
+     * @param reportId ID of the report
+     * @param isUpvote true = upvote, false = downvote
+     */
+    fun voteOnReport(reportId: Int, isUpvote: Boolean) {
+        viewModelScope.launch {
+            val currentVote = _userVotes.value[reportId]
+            val dto = SaveReportVoteDto(
+                reportId = reportId,
+                isUpvote = if (currentVote == isUpvote) null else isUpvote
+            )
+            val success = ReportVoteService.vote(listOf(dto))
+            if (success) {
+                val newVote = dto.isUpvote
+                _userVotes.value = _userVotes.value.toMutableMap().apply {
+                    if (newVote == null) remove(reportId)
+                    else put(reportId, newVote)
+                }
+                _reports.value = _reports.value.map { report ->
+                    if (report.id != reportId) return@map report
+                    var up = report.upvoteCount
+                    var down = report.downvoteCount
+                    when (currentVote to newVote) {
+                        true to null -> up--
+                        true to false -> { up--; down++ }
+                        false to null -> down--
+                        false to true -> { down--; up++ }
+                        null to true -> up++
+                        null to false -> down++
+                    }
+                    report.copy(upvoteCount = up, downvoteCount = down)
+                }
+            }
+        }
+    }
+
+    /** Toggles the display of public places on/off. */
     fun togglePublicLocationsFilter() {
         val newValue = !_showPublicLocations.value
         _showPublicLocations.value = newValue
@@ -170,12 +283,26 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Toggles the debug mode for closed places on/off.
+     * Only takes effect when showPublicLocations is active.
+     */
     fun toggleClosedPlacesFilter() {
         val newValue = !_showClosedPlaces.value
         _showClosedPlaces.value = newValue
         currentLocation?.let { fetchNearbyPlaces(it, includeClosed = newValue) }
     }
 
+    /** Toggles the visibility of the heatmap overlay. */
+    fun toggleHeatmap() {
+        _showHeatmap.value = !_showHeatmap.value
+    }
+
+    /**
+     * Attempts to determine the current location.
+     * @param fallbackToDefault If true, falls back to default coordinates
+     * @return true if the operation could be started
+     */
     private fun tryFetchCurrentLocation(fallbackToDefault: Boolean): Boolean {
         return try {
             fusedLocationClient.getCurrentLocation(
@@ -187,7 +314,7 @@ class MapViewModel(
                 handleLocationResult(null, fallbackToDefault = fallbackToDefault)
             }
             true
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             if (fallbackToDefault) {
                 updateUiWithLocation(defaultLocation)
             }
@@ -195,6 +322,11 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Processes the result of location determination.
+     * @param location Found location or null
+     * @param fallbackToDefault Fall back to default coordinates if no location
+     */
     private fun handleLocationResult(location: Location?, fallbackToDefault: Boolean) {
         if (location != null) {
             val latLng = LatLng(location.latitude, location.longitude)
@@ -215,7 +347,7 @@ class MapViewModel(
                         onLocationUpdated(defaultLocation)
                     }
                 }
-            } catch (e: SecurityException) {
+            } catch (_: SecurityException) {
                 if (fallbackToDefault) {
                     updateUiWithLocation(defaultLocation)
                     _autoFocusTrigger.value = System.nanoTime()
@@ -225,20 +357,39 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Called on every location update.
+     * Starts queries for places and reports on significant position changes.
+     * @param latLng New location
+     */
     private fun onLocationUpdated(latLng: LatLng) {
-        val shouldFetch = _showPublicLocations.value && hasLocationChangedSignificantly(currentLocation, latLng)
+        val isFirstLocation = currentLocation == null
+        val shouldFetchPlaces = _showPublicLocations.value && hasLocationChangedSignificantly(currentLocation, latLng)
+        val shouldFetchReports = hasLocationChangedSignificantly(currentLocation, latLng)
         currentLocation = latLng
 
-        if (shouldFetch) {
+        if (shouldFetchPlaces) {
             fetchNearbyPlaces(latLng)
+        }
+        if (shouldFetchReports) {
+            fetchReports(latLng)
+        }
+        if (isFirstLocation) {
+            startAutoRefresh()
         }
     }
 
+    /**
+     * Checks whether the location has changed by more than 100m.
+     * @param oldLocation Previous location (null = significant change)
+     * @param newLocation New location
+     * @return true on significant change
+     */
     private fun hasLocationChangedSignificantly(oldLocation: LatLng?, newLocation: LatLng): Boolean {
         if (oldLocation == null) return true
 
         val results = FloatArray(1)
-        android.location.Location.distanceBetween(
+        Location.distanceBetween(
             oldLocation.latitude, oldLocation.longitude,
             newLocation.latitude, newLocation.longitude,
             results
@@ -246,6 +397,11 @@ class MapViewModel(
         return results[0] > 100.0f
     }
 
+    /**
+     * Loads public places within a 800m radius.
+     * @param location Center of the search
+     * @param includeClosed Whether closed places should be included
+     */
     private fun fetchNearbyPlaces(location: LatLng, includeClosed: Boolean = false) {
         placesFetchJob?.cancel()
 
@@ -258,7 +414,7 @@ class MapViewModel(
                     includeClosed = includeClosed
                 )
                 _nearbyPlaces.value = result.getOrDefault(emptyList())
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _nearbyPlaces.value = emptyList()
             } finally {
                 _isLoadingPlaces.value = false
@@ -266,11 +422,59 @@ class MapViewModel(
         }
     }
 
+    /**
+     * Loads safety reports within a 800m radius and updates votes and heatmap.
+     * @param location Center of the search
+     */
+    private fun fetchReports(location: LatLng) {
+        viewModelScope.launch {
+            _isLoadingReports.value = true
+            try {
+                _reports.value = ReportService.get(
+                    latitude = location.latitude,
+                    longitude = location.longitude,
+                    radiusInMeters = 800
+                )
+                val votes = ReportVoteService.getMyVotes()
+                _userVotes.value = votes.associate { it.reportId to it.isUpvote }
+            } catch (_: Exception) {
+                _reports.value = emptyList()
+            } finally {
+                _isLoadingReports.value = false
+            }
+        }
+    }
+
+    /** Starts periodic report refresh every 60 seconds. */
+    private fun startAutoRefresh() {
+        if (autoRefreshJob?.isActive == true) return
+        autoRefreshJob = viewModelScope.launch {
+            while (true) {
+                delay(60_000)
+                currentLocation?.let { fetchReports(it) }
+            }
+        }
+    }
+
+    /** Stops the periodic refresh when the ViewModel is destroyed. */
+    override fun onCleared() {
+        super.onCleared()
+        autoRefreshJob?.cancel()
+    }
+
+    /**
+     * Updates UI state and camera position to the new location.
+     * @param latLng New location
+     */
     private fun updateUiWithLocation(latLng: LatLng) {
         _savedCameraPosition.value = CameraPosition.fromLatLngZoom(latLng, 15f)
         _uiState.value = MapUiState.Location(latLng)
     }
 
+    /**
+     * Determines the location for SMS functions (suspend).
+     * @return Location or null on error
+     */
     suspend fun requestLocationForSms(): LatLng? {
         return suspendCancellableCoroutine { cont ->
             try {
@@ -286,12 +490,16 @@ class MapViewModel(
                 }.addOnFailureListener {
                     fetchLastForSms(cont)
                 }
-            } catch (e: SecurityException) {
+            } catch (_: SecurityException) {
                 cont.resume(null)
             }
         }
     }
 
+    /**
+     * Fallback for SMS location: returns the last known location.
+     * @param cont Continuation for the asynchronous return value
+     */
     private fun fetchLastForSms(cont: kotlinx.coroutines.CancellableContinuation<LatLng?>) {
         try {
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
@@ -299,7 +507,7 @@ class MapViewModel(
             }.addOnFailureListener {
                 cont.resume(null)
             }
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             cont.resume(null)
         }
     }
