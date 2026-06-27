@@ -13,6 +13,22 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * UI state for the report creation/editing and user reports screens.
+ *
+ * @property categories Available rating categories from the API
+ * @property ratings Map of category ID to star rating
+ * @property title Report title input
+ * @property description Report description input
+ * @property loading Whether categories are being loaded
+ * @property saving Whether the report is being saved
+ * @property showErrors Whether validation errors should be displayed
+ * @property showSuccess Whether the last save operation was successful
+ * @property showError Error message to display, or null
+ * @property reportsByUser List of reports created by the current user
+ * @property reportsByUserLoading Whether user reports are being loaded
+ * @property editingReport The report being edited, or null for new reports
+ */
 data class ReportUiState(
     val categories: List<ReportCategoryDto> = emptyList(),
     val ratings: Map<Int, Int> = emptyMap(),
@@ -28,6 +44,11 @@ data class ReportUiState(
     val editingReport: ReportDto? = null
 )
 
+/**
+ * ViewModel for creating, editing, viewing, and deleting safety reports.
+ *
+ * @property uiState StateFlow of the report UI state
+ */
 class ReportViewModel() : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReportUiState())
@@ -37,6 +58,9 @@ class ReportViewModel() : ViewModel() {
         loadCategories()
     }
 
+    /**
+     * Loads the available report rating categories from the API.
+     */
     private fun loadCategories() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
@@ -46,20 +70,39 @@ class ReportViewModel() : ViewModel() {
         }
     }
 
+    /**
+     * Updates the report title in the UI state.
+     *
+     * @param title The new title text
+     */
     fun updateTitle(title: String) {
         _uiState.value = _uiState.value.copy(title = title)
     }
 
+    /**
+     * Updates the report description in the UI state.
+     *
+     * @param description The new description text
+     */
     fun updateDescription(description: String) {
         _uiState.value = _uiState.value.copy(description = description)
     }
 
+    /**
+     * Sets the rating for a specific category.
+     *
+     * @param categoryId The category ID
+     * @param rating The star rating value
+     */
     fun updateRating(categoryId: Int, rating: Int) {
         _uiState.value = _uiState.value.copy(
             ratings = _uiState.value.ratings + (categoryId to rating)
         )
     }
 
+    /**
+     * Resets the report form to its initial empty state.
+     */
     fun resetForm() {
         _uiState.value = _uiState.value.copy(
             title = "",
@@ -73,6 +116,13 @@ class ReportViewModel() : ViewModel() {
         )
     }
 
+    /**
+     * Saves the report (creates a new one or updates an existing one).
+     * Validates that title, description, and all ratings are filled.
+     *
+     * @param latitude Latitude of the report location
+     * @param longitude Longitude of the report location
+     */
     fun save(latitude: Double, longitude: Double) {
         val state = _uiState.value
         if (state.title.isBlank() || state.description.isBlank() || state.categories.any { (state.ratings[it.id] ?: 0) == 0 }) {
@@ -107,6 +157,9 @@ class ReportViewModel() : ViewModel() {
         }
     }
 
+    /**
+     * Loads all reports created by the current user from the API.
+     */
     fun loadReportsByUser() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(reportsByUserLoading = true)
@@ -118,6 +171,11 @@ class ReportViewModel() : ViewModel() {
         }
     }
 
+    /**
+     * Deletes a report by its ID and removes it from the local list on success.
+     *
+     * @param id The ID of the report to delete
+     */
     fun deleteReport(id: Int) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(showError = null)
@@ -134,6 +192,11 @@ class ReportViewModel() : ViewModel() {
         }
     }
 
+    /**
+     * Loads a report's data into the form for editing.
+     *
+     * @param report The report to edit
+     */
     fun editReport(report: ReportDto) {
         _uiState.value = _uiState.value.copy(
             editingReport = report,

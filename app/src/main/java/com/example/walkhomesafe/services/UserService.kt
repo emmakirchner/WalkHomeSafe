@@ -8,6 +8,9 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+/**
+ * Service object for user management operations via the REST API.
+ */
 object UserService {
 
     private const val BASE_URL = "https://walkhomesafe-frfgcrdtfkaqg3cd.germanywestcentral-01.azurewebsites.net"
@@ -17,6 +20,11 @@ object UserService {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
+    /**
+     * Deletes the currently authenticated user's account and associated data from the backend.
+     *
+     * @param onResult Callback with (success, errorMessage) where errorMessage is null on success
+     */
     fun deleteUser(onResult: (Boolean, String?) -> Unit) {
         val user = FirebaseAuth.getInstance().currentUser ?: run {
             onResult(false, "Kein Benutzer angemeldet")

@@ -1,0 +1,11 @@
+:root {
+    --dokka-logo-image-url: url('../images/logo-icon.webp');
+    --dokka-logo-height: 36px;
+    --dokka-logo-width: 36px;
+}
+
+.library-name--link::before {
+    background-size: var(--dokka-logo-width) var(--dokka-logo-height);
+    width: var(--dokka-logo-width);
+    height: var(--dokka-logo-height);
+}

@@ -32,6 +32,14 @@ import androidx.compose.ui.unit.dp
 import com.example.walkhomesafe.viewmodel.LOCATION_PLACEHOLDER
 import com.example.walkhomesafe.viewmodel.MAX_MESSAGE_LENGTH
 
+/**
+ * Editable text field for the emergency message content.
+ * Supports a LOCATION_PLACEHOLDER token, character count display,
+ * and save/cancel actions.
+ *
+ * @param value Current message text
+ * @param onValueChange Callback when the message is saved
+ */
 @Composable
 fun EmergencyMessageTextField(
     value: String,

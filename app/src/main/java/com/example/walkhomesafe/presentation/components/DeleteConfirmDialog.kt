@@ -13,6 +13,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
 
+/**
+ * Confirmation dialog for deleting the user account.
+ * Handles deletion, error display, and re-authentication flow.
+ *
+ * @param onDismiss Callback when the dialog is dismissed or cancelled
+ * @param onDelete Function that accepts a callback receiving success/error result
+ * @param onReauthNeeded Callback when re-authentication is required
+ */
 @Composable
 fun DeleteConfirmDialog(
     onDismiss: () -> Unit,

@@ -36,6 +36,13 @@ import com.example.walkhomesafe.presentation.components.DeleteReportDialog
 import com.example.walkhomesafe.presentation.components.ReportCard
 import com.example.walkhomesafe.viewmodel.ReportViewModel
 
+/**
+ * Screen listing all reports created by the current user.
+ * Supports editing and deleting reports.
+ *
+ * @param onBack Callback to navigate back
+ * @param reportViewModel ViewModel for report CRUD operations
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsByUserScreen(

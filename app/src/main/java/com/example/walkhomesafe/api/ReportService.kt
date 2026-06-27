@@ -11,6 +11,9 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
+/**
+ * Service object for CRUD operations on safety reports via the REST API.
+ */
 object ReportService {
 
     private const val BASE_URL = "https://walkhomesafe-frfgcrdtfkaqg3cd.germanywestcentral-01.azurewebsites.net"
@@ -21,6 +24,12 @@ object ReportService {
         .readTimeout(10, TimeUnit.SECONDS)
         .build()
 
+    /**
+     * Creates a new safety report.
+     *
+     * @param request The report data to create
+     * @return HTTP status code on success, null on failure
+     */
     suspend fun create(request: SaveReportDto): Int? = withContext(Dispatchers.IO) {
         val user = FirebaseAuth.getInstance().currentUser ?: return@withContext null
         val idToken = try {
@@ -42,6 +51,14 @@ object ReportService {
         }
     }
 
+    /**
+     * Gets safety reports, optionally filtered by location and radius.
+     *
+     * @param latitude Optional center latitude for spatial search
+     * @param longitude Optional center longitude for spatial search
+     * @param radiusInMeters Optional search radius in meters
+     * @return List of matching reports, empty list on error
+     */
     suspend fun get(
         latitude: Double? = null,
         longitude: Double? = null,
@@ -72,6 +89,11 @@ object ReportService {
         }
     }
 
+    /**
+     * Gets all reports created by the currently authenticated user.
+     *
+     * @return List of the user's reports, empty list on error
+     */
     suspend fun getForCurrentUser(): List<ReportDto> = withContext(Dispatchers.IO) {
         val user = FirebaseAuth.getInstance().currentUser ?: return@withContext emptyList()
         val idToken = try {
@@ -95,6 +117,13 @@ object ReportService {
         }
     }
 
+    /**
+     * Updates an existing safety report.
+     *
+     * @param id The ID of the report to update
+     * @param request The updated report data
+     * @return HTTP status code on success, null on failure
+     */
     suspend fun update(id: Int, request: SaveReportDto): Int? = withContext(Dispatchers.IO) {
         val user = FirebaseAuth.getInstance().currentUser ?: return@withContext null
         val idToken = try {
@@ -116,6 +145,12 @@ object ReportService {
         }
     }
 
+    /**
+     * Deletes a safety report by its ID.
+     *
+     * @param id The ID of the report to delete
+     * @return true if deletion was successful, false otherwise
+     */
     suspend fun delete(id: Int): Boolean = withContext(Dispatchers.IO) {
         val user = FirebaseAuth.getInstance().currentUser ?: return@withContext false
         val idToken = try {

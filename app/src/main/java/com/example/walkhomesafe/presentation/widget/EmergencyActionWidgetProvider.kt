@@ -12,8 +12,19 @@ import com.example.walkhomesafe.presentation.widget.ACTION_ALARM
 import com.example.walkhomesafe.presentation.widget.ACTION_SMS
 import com.example.walkhomesafe.presentation.widget.EXTRA_SOS_ACTION
 
+/**
+ * Home screen widget provider for emergency SOS actions.
+ * Provides two buttons: emergency SMS and alarm trigger.
+ */
 class EmergencyActionWidgetProvider : AppWidgetProvider() {
 
+    /**
+     * Called when the widget is updated.
+     *
+     * @param context The application context
+     * @param appWidgetManager The widget manager
+     * @param appWidgetIds Array of widget IDs to update
+     */
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -25,6 +36,13 @@ class EmergencyActionWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        /**
+         * Updates a single widget instance with SOS button intents.
+         *
+         * @param context The application context
+         * @param appWidgetManager The widget manager
+         * @param appWidgetId The ID of the widget to update
+         */
         internal fun updateAppWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,

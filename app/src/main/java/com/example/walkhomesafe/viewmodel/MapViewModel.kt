@@ -134,7 +134,10 @@ class MapViewModel(
     val selectedLocation: StateFlow<LatLng?> = _selectedLocation.asStateFlow()
     val selectedAddress: StateFlow<String> = _selectedAddress.asStateFlow()
 
-    /** Starts one-time location determination on first call. */
+    /**
+     * Starts one-time location determination on first call.
+     * Subsequent calls are ignored via hasFetchedOnce flag.
+     */
     fun fetchLocation() {
         if (hasFetchedOnce) return
         hasFetchedOnce = true
@@ -154,7 +157,9 @@ class MapViewModel(
         _savedCameraPosition.value = cameraPosition
     }
 
-    /** Resets camera animation and requests a location update. */
+    /**
+     * Resets the camera animation flag and requests a fresh location determination.
+     */
     fun requestLocationRefresh() {
         hasAnimated = false
         viewModelScope.launch {
@@ -223,7 +228,9 @@ class MapViewModel(
         _suggestions.value = emptyList()
     }
 
-    /** Resets the manual selection and clears the search field. */
+    /**
+     * Resets the manual location selection and clears the search field.
+     */
     fun clearSelection() {
         _selectedLocation.value = null
         _selectedAddress.value = ""
@@ -231,7 +238,9 @@ class MapViewModel(
         _suggestions.value = emptyList()
     }
 
-    /** Triggers a new report fetch for the current location. */
+    /**
+     * Triggers a new report fetch for the current map location.
+     */
     fun refreshReports() {
         currentLocation?.let { fetchReports(it) }
     }
@@ -273,7 +282,10 @@ class MapViewModel(
         }
     }
 
-    /** Toggles the display of public places on/off. */
+    /**
+     * Toggles the display of public place markers on the map on/off.
+     * Refetches places when toggled on if the list is empty.
+     */
     fun togglePublicLocationsFilter() {
         val newValue = !_showPublicLocations.value
         _showPublicLocations.value = newValue
@@ -284,8 +296,8 @@ class MapViewModel(
     }
 
     /**
-     * Toggles the debug mode for closed places on/off.
-     * Only takes effect when showPublicLocations is active.
+     * Toggles the debug mode for showing closed places on/off.
+     * Refetches places with the new includeClosed setting.
      */
     fun toggleClosedPlacesFilter() {
         val newValue = !_showClosedPlaces.value
@@ -293,7 +305,9 @@ class MapViewModel(
         currentLocation?.let { fetchNearbyPlaces(it, includeClosed = newValue) }
     }
 
-    /** Toggles the visibility of the heatmap overlay. */
+    /**
+     * Toggles the visibility of the danger heatmap overlay.
+     */
     fun toggleHeatmap() {
         _showHeatmap.value = !_showHeatmap.value
     }
@@ -445,7 +459,9 @@ class MapViewModel(
         }
     }
 
-    /** Starts periodic report refresh every 60 seconds. */
+    /**
+     * Starts a coroutine that periodically refreshes reports every 60 seconds.
+     */
     private fun startAutoRefresh() {
         if (autoRefreshJob?.isActive == true) return
         autoRefreshJob = viewModelScope.launch {
@@ -456,7 +472,9 @@ class MapViewModel(
         }
     }
 
-    /** Stops the periodic refresh when the ViewModel is destroyed. */
+    /**
+     * Stops the periodic report refresh coroutine when the ViewModel is cleared.
+     */
     override fun onCleared() {
         super.onCleared()
         autoRefreshJob?.cancel()

@@ -22,6 +22,14 @@ import com.example.walkhomesafe.viewmodel.ContactsViewModel
 import com.example.walkhomesafe.viewmodel.MessageViewModel
 import com.example.walkhomesafe.viewmodel.PermissionsViewModel
 
+/**
+ * Contacts screen displaying the emergency contact list and the
+ * emergency message text editor. Handles contact picker integration.
+ *
+ * @param contactsViewModel ViewModel for managing emergency contacts
+ * @param messageViewModel ViewModel for the emergency message text
+ * @param permissionsViewModel ViewModel for runtime permissions
+ */
 @Composable
 fun ContactsScreen(
     contactsViewModel: ContactsViewModel = viewModel(),

@@ -23,6 +23,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
+/**
+ * Re-authentication dialog shown before account deletion.
+ * Requires the user to re-enter email and password for security.
+ *
+ * @param onDismiss Callback when the dialog is dismissed
+ * @param onReauthAndDelete Function receiving email, password, and a callback (success, error)
+ */
 @Composable
 fun ReauthDialog(
     onDismiss: () -> Unit,

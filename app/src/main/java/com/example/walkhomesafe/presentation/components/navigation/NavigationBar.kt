@@ -12,6 +12,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
+/**
+ * Enum representing the four main tabs of the bottom navigation bar.
+ */
 enum class BottomTab {
     HOME,
     CONTACTS,
@@ -19,6 +22,12 @@ enum class BottomTab {
     SETTINGS
 }
 
+/**
+ * Bottom navigation bar with four tabs: Home, Contacts, Map, and Settings.
+ *
+ * @param selectedTab The currently selected tab
+ * @param onTabSelected Callback when a tab is selected
+ */
 @Composable
 fun NavigationBar(
     selectedTab: BottomTab,

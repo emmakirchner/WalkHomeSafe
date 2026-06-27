@@ -20,6 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
+/**
+ * Dialog for requesting a password reset email.
+ *
+ * @param initialEmail Pre-filled email address
+ * @param onDismiss Callback when the dialog is dismissed
+ * @param onResetPassword Function receiving email and a callback (success, error)
+ * @param onFeedback Callback for displaying a feedback message to the user
+ */
 @Composable
 fun PasswordResetDialog(
     initialEmail: String,

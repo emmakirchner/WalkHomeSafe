@@ -28,6 +28,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.walkhomesafe.presentation.components.PasswordResetDialog
 import com.example.walkhomesafe.viewmodel.AuthViewModel
 
+/**
+ * Authentication screen with login and registration forms.
+ * Supports email/password login, registration with username, and password reset dialog.
+ *
+ * @param authViewModel ViewModel for authentication logic
+ */
 @Composable
 fun AuthScreen(
     authViewModel: AuthViewModel = viewModel(),

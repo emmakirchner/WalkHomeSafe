@@ -3,9 +3,7 @@ package com.example.walkhomesafe.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.walkhomesafe.data.emergencyContactsFlow
 import com.example.walkhomesafe.data.emergencyMessageFlow
-import com.example.walkhomesafe.data.saveEmergencyContacts
 import com.example.walkhomesafe.data.saveEmergencyMessage
 import com.example.walkhomesafe.model.EmergencyContact
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,9 +11,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/** Placeholder string in the emergency message that gets replaced with a location link. */
 const val LOCATION_PLACEHOLDER = "[STANDORT-LINK]"
+/** Maximum allowed length for the emergency message text. */
 const val MAX_MESSAGE_LENGTH = 110
 
+/**
+ * ViewModel for managing the emergency SMS message text.
+ * Persists the message to DataStore and enforces the maximum length constraint.
+ *
+ * @property message StateFlow of the current emergency message text
+ */
 class MessageViewModel(
     application: Application
 ) : AndroidViewModel(application) {
@@ -34,6 +40,12 @@ class MessageViewModel(
         }
     }
 
+    /**
+     * Updates the emergency message text. Ensures only the location placeholder
+     * appears at most once, enforces the maximum message length, and persists to DataStore.
+     *
+     * @param newMessage The new message text
+     */
     fun updateMessage(newMessage: String) {
         val firstIdx = newMessage.indexOf(LOCATION_PLACEHOLDER)
         val cleaned = if (firstIdx != -1) {

@@ -8,6 +8,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Composable that manages runtime permission requests via ActivityResultContracts.
+ * Handles both initial startup permission batch and subsequent individual requests via a Flow.
+ *
+ * @param permissionFlow Flow of individual permission requests at runtime
+ * @param startupPermissions List of permissions to request on initial composition
+ * @param onResult Callback with the grant result (true = granted, false = denied)
+ */
 @Composable
 fun PermissionHost(
     permissionFlow: Flow<PermissionIntent>,
@@ -50,6 +58,12 @@ fun PermissionHost(
             onResult(granted)
         }
 
+    /**
+     * Maps a PermissionIntent to the corresponding Android permission string.
+     *
+     * @param intent The permission intent to map
+     * @return The Android permission string
+     */
     fun permissionString(intent: PermissionIntent): String = when (intent) {
         PermissionIntent.SendSms -> Manifest.permission.SEND_SMS
         PermissionIntent.Notifications -> Manifest.permission.POST_NOTIFICATIONS
@@ -57,6 +71,11 @@ fun PermissionHost(
         PermissionIntent.AccessFineLocation -> Manifest.permission.ACCESS_FINE_LOCATION
     }
 
+    /**
+     * Launches the appropriate permission request dialog for the given intent.
+     *
+     * @param intent The permission intent to request
+     */
     fun launchPermission(intent: PermissionIntent) {
         when (intent) {
             PermissionIntent.SendSms ->

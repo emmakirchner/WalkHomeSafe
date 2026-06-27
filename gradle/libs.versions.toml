@@ -25,6 +25,7 @@ googleid = "1.2.0"
 okhttp = "4.12.0"
 lifecycleViewmodelKtx = "2.10.0"
 kotlinxCoroutinesPlayServices = "1.10.2"
+dokka = "2.2.0"
 
 [libraries]
 androidx-compose-material = { module = "androidx.compose.material:material" }
@@ -67,4 +68,6 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsGoogleServices" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+dokka-javadoc = { id = "org.jetbrains.dokka-javadoc", version.ref = "dokka" }
 

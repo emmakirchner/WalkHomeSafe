@@ -46,6 +46,17 @@ import com.example.walkhomesafe.ui.theme.RedDark
 
 private const val CROSS = "\u2715"
 
+/**
+ * Large SOS emergency action button with tap and long-press gestures.
+ * Tap sends an emergency SMS; long-press triggers an audible alarm.
+ * Supports cancel zone drag during alarm.
+ *
+ * @param modifier Modifier for styling and layout
+ * @param isAlarmActive Whether an alarm is currently active
+ * @param onShortPress Callback on short tap (emergency SMS)
+ * @param onLongPressRelease Callback when long press is released (start alarm)
+ * @param onCancel Callback when the cancel zone is tapped during alarm
+ */
 @Composable
 fun EmergencyActionButton(
     modifier: Modifier = Modifier,
@@ -192,6 +203,13 @@ private fun SosHintRow(isWhite: Boolean, isAlarmActive: Boolean) {
     }
 }
 
+/**
+ * Cancel zone displayed during alarm, allowing the user to stop it.
+ *
+ * @param modifier Modifier for positioning
+ * @param isHovered Whether the cancel zone is currently being hovered
+ * @param onClick Callback when the cancel zone is clicked
+ */
 @Composable
 fun CancelZone(modifier: Modifier, isHovered: Boolean, onClick: () -> Unit) {
     Box(

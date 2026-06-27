@@ -17,6 +17,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
+/**
+ * Star rating display and input component.
+ * When onRatingChange is provided, acts as an interactive 5-star rating control.
+ * Otherwise, displays a read-only star rating with small icons.
+ *
+ * @param rating Current rating value (1-5)
+ * @param onRatingChange Optional callback for interactive mode, null for read-only display
+ * @param modifier Modifier for styling and layout
+ */
 @Composable
 fun StarRating(
     rating: Int,

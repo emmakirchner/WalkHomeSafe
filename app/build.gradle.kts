@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.dokka.javadoc)
 }
 
 android {
@@ -23,9 +25,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../walkhomesafe-release-key.jks")
+            storePassword = "WalkHomeSafe2026"
+            keyAlias = "walkhomesafe"
+            keyPassword = "WalkHomeSafe2026"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -83,4 +95,15 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+dokka {
+    moduleName.set("WalkHomeSafe")
+    dokkaSourceSets.configureEach {
+        sourceRoots.setFrom(file("src/main/java"))
+    }
+    pluginsConfiguration.html {
+        customAssets.from(file("dokka/logo-icon.webp"))
+        customStyleSheets.from(file("dokka/logo-styles.css"))
+    }
 }

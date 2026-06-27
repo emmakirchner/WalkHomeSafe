@@ -10,6 +10,10 @@ import androidx.core.app.NotificationCompat
 import com.example.walkhomesafe.R
 import androidx.core.net.toUri
 
+/**
+ * Foreground service that plays a looping emergency alarm sound.
+ * Started via HomeViewModel when the user triggers the alarm action.
+ */
 class EmergencyAlarmService : Service() {
 
     private lateinit var player: MediaPlayer
@@ -60,6 +64,11 @@ class EmergencyAlarmService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /**
+     * Creates the foreground service notification with a stop action.
+     *
+     * @return The notification for the foreground service
+     */
     @SuppressLint("LaunchActivityFromNotification")
     private fun createNotification(): Notification {
         val manager = getSystemService(NotificationManager::class.java)
