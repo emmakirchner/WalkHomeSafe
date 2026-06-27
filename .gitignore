@@ -13,3 +13,16 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Security - never commit
+walkhomesafe-release-key.jks
+
+
+# Local IDE configuration (machine-specific)
+/.idea/deploymentTargetSelector.xml
+/.idea/deviceManager.xml
+/.idea/AndroidProjectSystem.xml
+/.idea/markdown.xml
+
+# Local Gradle config
+gradle/gradle-daemon-jvm.properties
